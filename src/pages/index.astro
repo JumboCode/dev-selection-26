@@ -1,21 +1,39 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Card from '../components/Card.astro';
-import Image from 'astro/components/Image.astro';
+import Layout from "../layouts/Layout.astro";
+import Card from "../components/Card.astro";
+import Image from "astro/components/Image.astro";
 ---
 
 <Layout title="JumboCode Developer Selection">
 	<main>
-		<h1 class="text-center text-3xl md:text-4xl lg:text-5xl font-semibold my-4">Welcome to JAM!</h1>
+		<h1 class="text-center text-3xl md:text-4xl lg:text-5xl font-semibold my-4">
+			Welcome to JAM!
+		</h1>
 		<h2 class="text-center text-xl">JumboCode Application Management</h2>
-		<div class="flex justify-center">
-			<Image src="/jam-logo-new.png" width="256px" height="256px" alt="JAM Logo" loading="eager">
+		<div class="flex justify-center my-1">
+			<Image
+				src="/jam-logo-new.png"
+				width="256px"
+				height="256px"
+				alt="JAM Logo"
+				loading="eager"
+			/>
 		</div>
-		<p class="text-center text-xl">Please sign in with your <span class="font-semibold underline">Tufts Google account</span></p>
-		<div class="flex justify-center">
-			<button class="p-3 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 rounded my-4 text-white">Sign In with Google</button>
-		</div>
+		<p class="text-center text-xl">
+			Please sign in with your <span class="font-semibold underline"
+				>Tufts Google account</span
+			>
+		</p>
 
-	</main>	
+		<form action="/api/auth/signin" method="post" class="text-center mx-auto">
+			<button
+				value="google"
+				name="provider"
+				type="submit"
+				class="p-3 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 rounded my-4 text-white"
+				>Sign in with Google</button
+			>
+			<input type="password" name="password" id="password" />
+		</form>
+	</main>
 </Layout>
-
