@@ -1,6 +1,15 @@
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Table, Column, Integer,Float, String, MetaData, inspect 
+from sqlalchemy import (
+    create_engine,
+    Table,
+    Column,
+    Integer,
+    Float,
+    String,
+    MetaData,
+    inspect,
+)
 import argparse, os, json, logging
 
 FAKENAMES_FEMALE_COL = "Female Names"
@@ -87,6 +96,7 @@ SENSITIVE_COLS = ["timestamp", "name", "email", "uncomfortable_with"]
 SENSITIVE_TABLE = "sensitive_application_data"
 PMTL_TABLE = "pmtl_application_data"
 
+
 def open_files():
     parser = argparse.ArgumentParser(
         description="Processes raw form data from JumboCode Applications for use in a developer selection database system."
@@ -104,10 +114,11 @@ def open_files():
         help="CSV file with three columns of fake names: female, male, and non-binary",
     )
     parser.add_argument(
-        '-o', '--output-dir', 
-        type=str, 
-        default=os.getcwd(), 
-        help='Optional directory to save processed files. Defaults to the current directory.'
+        "-o",
+        "--output-dir",
+        type=str,
+        default=os.getcwd(),
+        help="Optional directory to save processed files. Defaults to the current directory.",
     )
     args = parser.parse_args()
 
@@ -136,45 +147,77 @@ def add_fake_names(applications, fake_names):
 
     return applications
 
+
 def infer_sqlalchemy_type(dtype):
-    """ Map pandas dtype to SQLAlchemy's types """
-    if "int" in dtype.name:
+    """Infer SQLAlchemy column type from a pandas dtype."""
+    if pd.api.types.is_integer_dtype(dtype):
         return Integer
-    elif "float" in dtype.name:
+    elif pd.api.types.is_float_dtype(dtype):
         return Float
-    elif "object" in dtype.name:
-        return String(255)
+    elif pd.api.types.is_string_dtype(dtype):
+        return String
     else:
-        return String(255)
+        raise ValueError(f"Unsupported dtype: {dtype}")
+
+
+def upload_table(db_engine, table_name, table_df):
+    """Upload a DataFrame to a database table, replacing the table if it exists."""
+    inspector = inspect(db_engine)
+    metadata = MetaData(bind=db_engine)
+
+    # Drop table if it exists
+    if inspector.has_table(table_name):
+        table = Table(table_name, metadata, autoload_with=db_engine)
+        table.drop(db_engine)
+        logging.info(f"Existing table '{table_name}' dropped.")
+        metadata.clear()  # Clear metadata to avoid reusing the same table name
+    
+    # Create new table
+    columns = [
+        Column(name, infer_sqlalchemy_type(dtype))
+        for name, dtype in table_df.dtypes.items()
+    ]
+    new_table = Table(table_name, metadata, *columns)
+    new_table.create(db_engine)
+    logging.info(f"New table '{table_name}' created.")
+
+    # Upload DataFrame to the table
+    table_df.to_sql(table_name, con=db_engine, if_exists="replace", index=False)
+    logging.info(f"Data uploaded to '{table_name}' table.")
+
 
 def database_upload(applications):
+    """Upload application data to the database."""
     primary_key = FAKENAME_COL
-    sensitive_data = applications[[primary_key] + SENSITIVE_COLS]   
+    sensitive_data = applications[[primary_key] + SENSITIVE_COLS]
     pmtl_data = applications.drop(columns=SENSITIVE_COLS)
 
     load_dotenv()
 
-    DB_URI = os.getenv('SUPABASE_DB_URI')
-    if DB_URI is None:
-        logging.error("No environment variable named SUPABASE_DB_URI, cannot connect to database")
-    db_engine = create_engine(DB_URI)
-    inspector = inspect(db_engine)
-    metadata = MetaData() 
+    DB_URI = os.getenv("SUPABASE_DB_URI")
+    if not DB_URI:
+        logging.error(
+            "No environment variable named SUPABASE_DB_URI; cannot connect to database"
+        )
+        return  # Exit function if DB_URI is not found
 
-    def upload_table(db_engine, inspector, metadata, table_name, table_df):
-        if inspector.has_table(table_name):
-            table = Table(table_name, metadata, autoload_with=db_engine)
-            table.drop(db_engine)
-        
-        columns = [Column(name, infer_sqlalchemy_type(dtype)) for name, dtype in table_df.dtypes.items()]
-        sensitive_table = Table(table_name, metadata, *columns)
-        sensitive_table.create(db_engine)
-        sensitive_data.to_sql(table_name, con=db_engine, if_exists='replace', index=False)
+    # Establish database connection
+    try:
+        db_engine = create_engine(DB_URI)
+    except Exception as e:
+        logging.error(f"Failed to create database engine: {e}")
+        return
 
-    upload_table(db_engine, inspector, metadata, SENSITIVE_TABLE, sensitive_data)
-    upload_table(db_engine, inspector, metadata, PMTL_TABLE, pmtl_data)
+    # Upload the sensitive and pmtl data tables
+    try:
+        upload_table(db_engine, SENSITIVE_TABLE, sensitive_data)
+        upload_table(db_engine, PMTL_TABLE, pmtl_data)
+        logging.info("Successfully uploaded application data to Supabase.")
+    except Exception as e:
+        logging.error(f"Failed to upload data: {e}")
+    finally:
+        db_engine.dispose()
 
-    logging.info("Successfully uploaded application data to Supabase")
 
 def save_files(applications, short_to_full, output_dir):
     applications.to_csv(os.path.join(output_dir, "parsed_jc_applications.csv"))
@@ -183,13 +226,13 @@ def save_files(applications, short_to_full, output_dir):
         json.dump(short_to_full, outfile)
 
 
-
 def main():
     applications, fake_names, output_dir = open_files()
     add_fake_names(applications, fake_names)
     applications = applications.rename(columns=full_to_short)
     database_upload(applications)
     save_files(applications, short_to_full, output_dir)
+
 
 if __name__ == "__main__":
     main()
