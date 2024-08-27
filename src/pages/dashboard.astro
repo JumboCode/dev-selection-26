@@ -11,12 +11,12 @@ if (!accessToken || !refreshToken) {
   return redirect("/signin");
 }
 
-const { data, error } = await supabase.auth.setSession({
+const {data: userData, error: authError } = await supabase.auth.setSession({
   refresh_token: refreshToken.value,
   access_token: accessToken.value,
 });
 
-if (error) {
+if (authError) {
   cookies.delete("sb-access-token", {
     path: "/",
   });
@@ -27,14 +27,16 @@ if (error) {
   return redirect("/signin");
 }
 
-const email = data.user?.email;
+const { data: userRole, error: userRoleError } = await supabase
+  .from("user_roles")
+  .select("*")
+  .eq("email", userData.user?.email).maybeSingle();
 
-const applicant_data = 
 ---
 
-
 <Layout title="dashboard">
-  <h1>Hello {email}!</h1>
+  <h1>Hello, {userRole.email}!</h1>
+  <h2>{userRole.role} {userRole.team_name}</h2>
   <form action="/api/auth/signout">
     <button type="submit">Sign out</button>
   </form>
