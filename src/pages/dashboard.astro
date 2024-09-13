@@ -32,11 +32,13 @@ const { data: userRole, error: userRoleError } = await supabase
   .select("*")
   .eq("email", userData.user?.email).maybeSingle();
 
+console.log(userRole);
+
 ---
 
 <Layout title="dashboard">
-  <h1>Hello, {userRole.email}!</h1>
-  <h2>{userRole.role} {userRole.team_name}</h2>
+  <h1 class="text-center text-3xl">Hello, {userRole.email}!</h1>
+  <h2 class="text-center text-2xl">Role: {userRole.role}, Team: {userRole.team_name}</h2>
   <form action="/api/auth/signout">
     <button type="submit">Sign out</button>
   </form>
