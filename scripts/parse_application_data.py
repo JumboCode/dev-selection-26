@@ -20,78 +20,81 @@ FAKENAME_COL = "fake_name"
 PRONOUNS_COL = "Pronouns"
 
 full_column_names = [
-    "Timestamp",
-    "Full Name",
-    "Board Recommended?",
-    "Pronouns",
-    "Email Address",
-    "Class Year",
-    "Do you identify as a member of an underrepresented group in STEM?",
-    "Why do you want to join JumboCode? What do you hope to gain by joining the club?",
+    'Timestamp',
+    'Full Name',
+    'Board Notes',
+    'Pronouns',
+    'Email Address',
+    'Class Year',
+    'Do you identify as a member of an underrepresented group in STEM?',
+    'Why do you want to join JumboCode? What do you hope to gain by joining the club?',
     "What's your experience with volunteering, working with non-profits, community engagement, and/or social good activism?",
-    "Will you be in person on campus this semester?",
-    "Do you expect to be in person on campus next semester?",
-    "Which of the following classes have you taken?",
+    'Will you be in person on campus this semester?',
+    'Do you expect to be in person on campus next semester?',
+    "What's your availability for a one-hour weekly team meeting?",
+    'Which of the following classes have you taken?',
     "List any technologies you're comfortable with:",
-    "What was your first introduction to computer science?",
+    'What was your first introduction to computer science?',
     "Tell us about a project you're proud of",
-    "If you have any links to share with us (e.g. GitHub), please share them here:",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [The Lantern Club (Sristi Panchu, Thomas Lai)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [SpeakOUT Boston (Aidan Banerjee, Jimmy Maslen)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [HomeStart (Rebecca Dinsmore, Rusny Rahman)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Casa Myrna (Elizabeth Foster, Nishika Pabba)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Dress for Success (Jyoti Bhardwaj, TBA)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Sibling Connections (Ella Lesperance, Nate Nameth)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Somerville Homeless Coalition (Cameron Yuen, Henry Gray)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Bi-women Quarterly (Austen Money, Shreyas Ravi)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Keep Mass Beautiful (Anneka Le, Matt Torres)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Emerald Necklace Conservancy (Ben Skinner, Roger Burtonpatel)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Theatre@First (Liam Strand, Amitav Nott)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [The Legacy Project (Kim Nguyen, Nick Doan)]",
-    "Please elaborate on your preferences here:",
-    "Is there anyone (in JumboCode or another applicant) you would feel uncomfortable working with for any reason? Feel free to elaborate on the situation as much or as little as you wish.",
-    "Is there anything else you want to add/want us to know?",
+    'If you have any links to share with us (e.g. GitHub/Personal Website), please share them here:',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [West Medford Community Center (PMs: Neya & Dan, TL: Winston)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Village Hub Food (PM: Idil, TL: Jiyoon)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [The Wily Network (PM: Avery, TL: Alana)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Somerville Museum (PM: Holden, TL: Zack)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Dillar Academy (PM: Lillian, TL: Megan)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [New England Innocence Project (PM: Sarah, TL: Siara)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [LGBTQ Senior Housing (PM: Charles, TL: Haijun)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [LCS Tutoring (PM: Dilanur, TL: Brandon)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [English at Large (PM: Jennifer, TL: Clarence)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Bread & Roses (PM: Johnny, TL: Won)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [A2Empowerment (PM: Rofeeah, TL: Will)]',
+    'Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Tufts General Counsel (PM: Rebecca, TL: Sachin)]',
+    'Please elaborate on your preferences here:',
+    'Is there anyone (in JumboCode or another applicant) you would feel uncomfortable working with for any reason? Feel free to elaborate on the situation as much or as little as you wish.',
+    'Is there anything else you want to add/want us to know?',
+    'Have you been a part of JumboCode before? If so, what project(s)?'
 ]
 
-# Shorter names for the columns
-short_column_names = [
-    "timestamp",
-    "name",
-    "board_rec",
-    "pronouns",
-    "email",
-    "class_year",
-    "underrep_group",
-    "reason_join",
-    "experience",
-    "on_campus_this_sem",
-    "on_campus_next_sem",
-    "classes_taken",
-    "technologies",
-    "intro_cs",
-    "proud_project",
-    "links",
-    "pref_lantern_club",
-    "pref_speakout",
-    "pref_homestart",
-    "pref_casa_myrna",
-    "pref_dress_for_success",
-    "pref_sibling_conn",
-    "pref_somerville_homeless",
-    "pref_bi_women_qrtly",
-    "pref_keep_mass",
-    "pref_emerald_necklace",
-    "pref_theatre_first",
-    "pref_legacy_project",
-    "elaborate_prefs",
-    "uncomfortable_with",
-    "additional_info",
+short_column_names =[
+    'timestamp',
+    'full_name',
+    'board_notes',
+    'pronouns',
+    'email',
+    'class_year',
+    'underrepresented_group_in_stem',
+    'why_join_jumbocode',
+    'volunteering_experience',
+    'in_person_this_semester',
+    'in_person_next_semester',
+    'weekly_meeting_availability',
+    'classes_taken',
+    'technologies',
+    'intro_to_cs',
+    'project_proud_of',
+    'links',
+    'rank_west_medford',
+    'rank_village_hub',
+    'rank_wily_network',
+    'rank_somerville_museum',
+    'rank_dillar_academy',
+    'rank_new_england_innocence',
+    'rank_lgbtq_senior_housing',
+    'rank_lcs_tutoring',
+    'rank_english_at_large',
+    'rank_bread_roses',
+    'rank_a2empowerment',
+    'rank_tufts_general_counsel',
+    'preferences_elaboration',
+    'uncomfortable_with',
+    'additional_info',
+    'jumbocode_previous_projects'
 ]
-
+ 
 full_to_short = dict(zip(full_column_names, short_column_names))
 short_to_full = dict(zip(short_column_names, full_column_names))
 
-SENSITIVE_COLS = ["timestamp", "name", "email", "uncomfortable_with"]
+SENSITIVE_COLS = ["timestamp", "full_name", "email", "uncomfortable_with"]
 
 SENSITIVE_TABLE = "sensitive_application_data"
 PMTL_TABLE = "pmtl_application_data"
@@ -111,7 +114,7 @@ def open_files():
         "fake_names",
         metavar="fake_names_csv",
         type=str,
-        help="CSV file with three columns of fake names: female, male, and non-binary",
+        help="CSV file with three columns of fake names: female, male, and non-binary"
     )
     parser.add_argument(
         "-o",
@@ -123,6 +126,7 @@ def open_files():
     args = parser.parse_args()
 
     applications_csv = pd.read_csv(args.applications_csv)
+    
     fake_names = pd.read_csv(args.fake_names)
 
     output_dir = args.output_dir
@@ -131,21 +135,14 @@ def open_files():
 
 
 def add_fake_names(applications, fake_names):
-    applications[FAKENAME_COL] = ""
-
-    def get_fake_name(row):
-        if not isinstance(row[PRONOUNS_COL], str):
-            return fake_names.loc[row.name, FAKENAMES_NONBINARY_COL]
-        elif "she" in row[PRONOUNS_COL].lower():
-            return fake_names.loc[row.name, FAKENAMES_FEMALE_COL]
-        elif "he" in row[PRONOUNS_COL].lower():
-            return fake_names.loc[row.name, FAKENAMES_MALE_COL]
-        else:
-            return fake_names.loc[row.name, FAKENAMES_NONBINARY_COL]
-
-    applications[FAKENAME_COL] = applications.apply(get_fake_name, axis=1)
+    applications[FAKENAME_COL] = fake_names["characters"]
 
     return applications
+
+
+TEAM_COL = "confirmed_team"
+def add_app_status_fields(applications):
+    applications[TEAM_COL] = ""
 
 
 def infer_sqlalchemy_type(dtype):
@@ -230,6 +227,7 @@ def main():
     applications, fake_names, output_dir = open_files()
     add_fake_names(applications, fake_names)
     applications = applications.rename(columns=full_to_short)
+    add_app_status_fields(applications)
     database_upload(applications)
     save_files(applications, short_to_full, output_dir)
 

@@ -1,6 +1,6 @@
 $scriptPath = Join-Path -Path (Get-Location) -ChildPath "scripts\parse_application_data.py"
-$dataPath = Join-Path -Path (Get-Location) -ChildPath "data\test_applications.csv"
-$namesListPath = Join-Path -Path (Get-Location) -ChildPath "data\names_list.csv"
+$dataPath = Join-Path -Path (Get-Location) -ChildPath "data\new_test_apps.csv"
+$namesListPath = Join-Path -Path (Get-Location) -ChildPath "data\lotr_names.csv"
 $outputPath = Join-Path -Path (Get-Location) -ChildPath "scripts\out"
 
 if (-Not (Test-Path -Path $outputPath)) {
