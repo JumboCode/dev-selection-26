@@ -1,6 +1,10 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { supabase } from "../lib/supabase";
+import SignOut from "../components/SignOut.astro";
+import TeamTable from "../components/TeamTable.astro";
+import StatusTable from "../components/StatusTable.tsx";
+import { Card, Button, Table } from "antd";
 
 const { cookies, redirect } = Astro;
 
@@ -8,10 +12,10 @@ const accessToken = cookies.get("sb-access-token");
 const refreshToken = cookies.get("sb-refresh-token");
 
 if (!accessToken || !refreshToken) {
-  return redirect("/signin");
+  return redirect("/");
 }
 
-const {data: userData, error: authError } = await supabase.auth.setSession({
+const { data: userData, error: authError } = await supabase.auth.setSession({
   refresh_token: refreshToken.value,
   access_token: accessToken.value,
 });
@@ -24,22 +28,105 @@ if (authError) {
     path: "/",
   });
 
-  return redirect("/signin");
+  return redirect("/api/auth/signin");
 }
 
 const { data: userRole, error: userRoleError } = await supabase
   .from("user_roles")
   .select("*")
-  .eq("email", userData.user?.email).maybeSingle();
+  .eq("email", userData.user?.email)
+  .maybeSingle();
 
-console.log(userRole);
+if (userRoleError) {
+  console.error(userRoleError);
+}
 
+if (!userRole) {
+  return redirect("/unauthorized");
+}
+
+let selectionStatus = undefined;
+// Get all active dev selection statuses (if board)
+if (userRole.team_name === "Board") {
+  const { data: teamSelectStatus, error: teamSelectStatusError } =
+    await supabase.from("team-status").select("*");
+  if (teamSelectStatusError) {
+    console.error(teamSelectStatusError);
+  }
+  selectionStatus = teamSelectStatus;
+} else {
+  const { data: teamSelectStatus, error: teamSelectStatusError } =
+    await supabase
+      .from("team-status")
+      .select("*")
+      .eq("team_name", userRole.team_name);
+  selectionStatus = teamSelectStatus;
+  if (teamSelectStatusError) {
+    console.error(teamSelectStatusError);
+  }
+}
+console.log(selectionStatus);
+
+// Get all team members (search in user_roles and accepted col of apps)
+const { data: teamLeadersQuery, error: teamLeadersError } = await supabase
+  .from("user_roles")
+  .select("email, role, first_name")
+  .eq("team_name", userRole.team_name);
+if (teamLeadersError) {
+  console.error(teamLeadersError);
+}
+
+const { data: confirmedDevsQuery, error: devsQueryError } = await supabase
+  .from("pmtl_appplication_data")
+  .select(
+    `
+  sensitive_application_data(
+    full_name,
+    email
+  )`,
+  )
+  .eq("confirmed_team", userRole.team_name);
+if (devsQueryError) {
+  console.error(devsQueryError);
+}
+
+const fullRoster = [];
+teamLeadersQuery?.forEach((leader, index) => {
+  fullRoster.push({
+    key: index.toString(),
+    email: leader.email,
+    name: leader.first_name,
+    role: leader.role,
+  });
+});
+confirmedDevsQuery?.forEach((dev) => {
+  fullRoster.push({
+    key: fullRoster.length.toString(),
+    email: dev.email,
+    name: dev.full_name,
+    role: "Developer",
+  });
+});
 ---
 
 <Layout title="dashboard">
-  <h1 class="text-center text-3xl">Hello, {userRole.email}!</h1>
-  <h2 class="text-center text-2xl">Role: {userRole.role}, Team: {userRole.team_name}</h2>
-  <form action="/api/auth/signout">
-    <button type="submit">Sign out</button>
-  </form>
+  <h1 class="text-center text-4xl my-4 font-semibold mx-2">
+    Hello {userRole.first_name}!
+  </h1>
+  <h2 class="text-center text-2xl my-2 mx-2">
+    Team: {userRole.team_name} ({userRole.role})
+  </h2>
+  <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
+    <Card title="My Dev Selection Status" classNames="text-center" client:load>
+      <StatusTable rows={selectionStatus} client:load />
+    </Card>
+  </div>
+  <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
+    <Card title="My Team" client:visible>
+      <TeamTable rows={fullRoster} />
+    </Card>
+  </div>
+  <div class="flex justify-center mb-8">
+    <SignOut />
+  </div>
 </Layout>
