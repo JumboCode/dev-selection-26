@@ -116,8 +116,11 @@ confirmedDevsQuery?.forEach((dev) => {
   <h2 class="text-center text-2xl my-2 mx-2">
     Team: {userRole.team_name} ({userRole.role})
   </h2>
+  <div class="flex justify-center mt-8">
+    <SignOut />
+  </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="My Dev Selection Status" classNames="text-center" client:load>
+    <Card title="My Dev Selection Status" classNames="text-center" client:visible>
       <StatusTable rows={selectionStatus} client:load />
     </Card>
   </div>
@@ -125,8 +128,5 @@ confirmedDevsQuery?.forEach((dev) => {
     <Card title="My Team" client:visible>
       <TeamTable rows={fullRoster} />
     </Card>
-  </div>
-  <div class="flex justify-center">
-    <SignOut />
   </div>
 </Layout>

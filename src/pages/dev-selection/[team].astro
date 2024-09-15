@@ -2,7 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import { supabase } from "../../lib/supabase";
 import SignOut from "../../components/SignOut.astro";
-import { Card } from "antd";
+import { Button, Card } from "antd";
 import DeveloperSelectionTable from "../../components/DeveloperSelectionTable.tsx";
 
 const { cookies, redirect } = Astro;
@@ -47,15 +47,15 @@ const { data: devSelectionData, error: devSelectionFetchError } = await supabase
   .select("*, dev-selections(selected_by)")
   .order("rank_" + team, { ascending: true });
 if (devSelectionFetchError) {
-  console.error(devSelectionFetchError)
+  console.error(devSelectionFetchError);
 }
 
 const devData = devSelectionData?.map((entry, index) => {
-  return ({
+  return {
     ...entry,
-    key: index
-  })
-})
+    key: index,
+  };
+});
 ---
 
 <Layout title="dashboard">
@@ -66,12 +66,23 @@ const devData = devSelectionData?.map((entry, index) => {
     {userRole.first_name} ({userRole.role})
   </h2>
 
+  <div class="flex justify-center my-8">
+    <Button
+      type="primary"
+      size="large"
+      shape="round"
+      href="/dashboard"
+      client:load>Back to Dashboard</Button
+    >
+  </div>
+
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card
       title={projectNameReadable + " Selected Developers"}
       class="text-center"
-      client:load
-    />
+      client:load>
+      <DeveloperSelectionTable data={[]} team={team} />
+    </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card title="All Developers" class="text-center" client:load>
