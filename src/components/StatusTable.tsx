@@ -56,6 +56,6 @@ const columns: TableProps<DataType>['columns'] = [
   },
 ];
 
-const StatusTable: React.FC<StatusTableProps> = (props) => <Table columns={columns} dataSource={props.rows} />;
+const StatusTable: React.FC<StatusTableProps> = (props) => <Table columns={columns} dataSource={props.rows} scroll={{ x: "max-content" }} />;
 
 export default StatusTable;
