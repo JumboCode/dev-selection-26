@@ -98,7 +98,7 @@ SENSITIVE_COLS = ["timestamp", "full_name", "email", "uncomfortable_with"]
 
 SENSITIVE_TABLE = "sensitive_application_data"
 PMTL_TABLE = "pmtl_application_data"
-DEV_SEL_TABLE = "dev-selections"
+DEV_SEL_TABLE = "dev_selections"
 
 def open_files():
     parser = argparse.ArgumentParser(

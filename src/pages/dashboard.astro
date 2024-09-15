@@ -65,7 +65,6 @@ if (userRole.team_name === "Board") {
     console.error(teamSelectStatusError);
   }
 }
-console.log(selectionStatus);
 
 // Get all team members (search in user_roles and accepted col of apps)
 const { data: teamLeadersQuery, error: teamLeadersError } = await supabase
@@ -77,7 +76,7 @@ if (teamLeadersError) {
 }
 
 const { data: confirmedDevsQuery, error: devsQueryError } = await supabase
-  .from("pmtl_appplication_data")
+  .from("pmtl_application_data")
   .select(
     `
   sensitive_application_data(
@@ -109,7 +108,7 @@ confirmedDevsQuery?.forEach((dev) => {
 });
 ---
 
-<Layout title="dashboard">
+<Layout title="JAM - Dashboard">
   <h1 class="text-center text-4xl my-4 font-semibold mx-2">
     Hello {userRole.first_name}!
   </h1>

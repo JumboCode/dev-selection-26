@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { Table } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Button, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
+import { supabase } from '../lib/supabase';
 
 interface DataType {
   timestamp: string;  // Assuming timestamp is a string in ISO format or similar
@@ -43,10 +44,19 @@ interface DataType {
 
 interface DevSelectionTableProps {
   data: DataType[],
-  team: string
+  team: string,
+  accessToken: any,
+  refreshToken: any
 }
 
 const columns: TableColumnsType<DataType> = [
+  {
+    title: 'Selected By',
+    dataIndex: 'dev_selections',
+    key: 'dev_selections',
+    render: (_, { dev_selections }) => <p>{dev_selections.selected_by}</p>
+
+  },
   { title: 'Fake Name', dataIndex: 'fake_name', key: 'fake_name' },
   { title: 'Board Notes', dataIndex: 'board_notes', key: 'board_notes' },
   { title: 'Pronouns', dataIndex: 'pronouns', key: 'pronouns' },
@@ -93,43 +103,182 @@ const columns: TableColumnsType<DataType> = [
     onFilter: (val, record) => record.underrepresented_group_in_stem === val
   },
   {
-    title: 'In person this semester?', dataIndex: 'in_person_this_semester', key: 'in_person_this_semester', 
+    title: 'In person this semester?', dataIndex: 'in_person_this_semester', key: 'in_person_this_semester',
     filters: [{ text: "Yes", value: "Yes" }, { text: "No", value: "No" }],
     onFilter: (val, record) => record.in_person_this_semester === val
   },
-  { title: 'In person next semester?', dataIndex: 'in_person_next_semester', key: 'in_person_next_semester',
-    filters: [{text: "Yes", value: "Yes"}, {text: "No", value: "No"}],
+  {
+    title: 'In person next semester?', dataIndex: 'in_person_next_semester', key: 'in_person_next_semester',
+    filters: [{ text: "Yes", value: "Yes" }, { text: "No", value: "No" }],
     onFilter: (val, record) => record.in_person_next_semester === val
-   },
-  { title: 'Classes Taken', dataIndex: 'classes_taken', key: 'classes_taken' },
+  },
   { title: 'Familiar Technologies', dataIndex: 'technologies', key: 'technologies' },
   { title: 'Personal Portfolio/Other Links', dataIndex: 'links', key: 'links' },
-  {
-    title: 'Action',
-    dataIndex: '',
-    key: 'x',
-    render: () => <a>Delete</a>,
-  },
 ];
 
 
+const RANKING_IDX = 2; const SELECT_IDX = 0;
 const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
-  useEffect(() => {
-
-    columns.unshift(
-      {
-        title: "Ranking",
-        dataIndex: "rank_" + props.team,
-        key: "rank_" + props.team,
-        sorter: {
-          compare: (a, b) => a["rank_" + props.team] - b["rank_" + props.team]
-        },
-        filters: rankFilters,
-        onFilter: (val, record) => record["rank_" + props.team] === val
+  const [realtimeData, setRealtimeData] = useState<DataType[]>(props.data);
+  
+  async function selectDev(fake_name) {
+    const index = realtimeData.findIndex(item => item.fake_name === fake_name)
+    if (index > -1) {
+      console.log(realtimeData[index])
+      const selections = realtimeData[index].dev_selections.selected_by;
+      let newSelections = "";
+      if (!selections) {
+        newSelections = props.team;
       }
-    );
-  }, [])
-  const rankFilters = [...Array(12).keys()].map(x => { return { text: x + 1, value: x + 1 } });
+      
+      else if (selections.includes(props.team)) {
+        return;
+      }
+      
+      else {
+        newSelections = selections + "," + props.team
+      }
+      console.log(newSelections)
+      await setRealtimeData((currentData) => {
+        const newData = [...currentData];  
+        const updatedSelections = {
+          ...newData[index],
+          dev_selections: { selected_by: newSelections }
+        }
+        newData[index] = updatedSelections;
+        return newData;  // Return the updated state
+
+      });
+      const { data: addTeamSel, error: teamSelError } = await supabase
+        .from("dev_selections")
+        .update({ selected_by: newSelections })
+        .eq("fake_name", fake_name)
+      if (teamSelError) {
+        console.error(teamSelError);
+      }
+
+
+    }
+  }
+
+  async function unselectDev(fake_name) {
+    const index = realtimeData.findIndex(item => item.fake_name === fake_name);
+    console.log(index);
+    if (index > -1) {
+      const selections = realtimeData[index].dev_selections.selected_by;
+      console.log(selections)
+      /*
+      if (!selections || !selections.includes(props.team)) {
+        return;
+      }
+        */
+      const newSelections = selections.replace("," + props.team, "").replace(props.team, "");
+      
+      await setRealtimeData((currentData) => {
+        const newData = [...currentData];  
+        const updatedSelections = {
+          ...newData[index],
+          dev_selections: { selected_by: newSelections }
+        }
+        newData[index] = updatedSelections;
+        return newData;  // Return the updated state
+
+      });
+      const { data: addTeamSel, error: teamSelError } = await supabase
+        .from("dev_selections")
+        .update({ selected_by: newSelections })
+        .eq("fake_name", fake_name)
+      if (teamSelError) {
+        console.error(teamSelError);
+      }
+      console.log(addTeamSel);
+    }
+  }
+
+  async function initSupabase(setRealtimeData, accessToken, refreshToken) {
+    if (!accessToken || !refreshToken)
+      return;
+    const { data: userData, error: authError } = await supabase.auth.setSession({
+      refresh_token: refreshToken.value,
+      access_token: accessToken.value,
+    });
+
+    const channel = supabase
+      .channel('custom-all-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'dev_selections' },
+        (payload) => {
+          console.log('Change received!', payload);
+          setRealtimeData((currentData) => {
+            const newData = [...currentData];  // Clone the current data for immutability
+
+            if (payload.eventType === 'UPDATE') {
+              const index = newData.findIndex(item => item.fake_name === payload.new.fake_name);
+
+              // Only update if the item is found and the selected_by field has a value
+              if (index > -1) {
+                const updatedSelections = {
+                  ...newData[index],
+                  dev_selections: { selected_by: payload.new.selected_by }
+                }
+                newData[index] = updatedSelections;
+
+                // Debugging information
+                console.log('Updated selected_by:', newData[index].dev_selections.selected_by);
+                console.log('Updated item index:', index);
+
+                return newData;  // Return the updated state
+              }
+            }
+
+            return currentData;  // If no update, return the current state to avoid unnecessary re-renders
+          });
+
+        }
+      )
+      .subscribe();
+
+  }
+
+  useEffect(() => {
+    // Create columns based on team names (this part remains the same)
+    if (columns.at(RANKING_IDX).title !== "Ranking") {
+      columns.splice(RANKING_IDX, 0,
+        {
+          title: "Ranking",
+          dataIndex: "rank_" + props.team,
+          key: "rank_" + props.team,
+          sorter: {
+            compare: (a, b) => a["rank_" + props.team] - b["rank_" + props.team]
+          },
+          filters: rankFilters,
+          onFilter: (val, record) => record["rank_" + props.team] === val
+        }
+      );
+    }
+
+    if (columns.at(0).title !== "Select") {
+      columns.splice(SELECT_IDX, 0, {
+        title: 'Select',
+        dataIndex: 'select',
+        key: 'select',
+        render: (_, { dev_selections, fake_name }) => dev_selections.selected_by && dev_selections.selected_by.includes(props.team)
+          ? <Button size="small" shape='round' type='primary' onClick={() => unselectDev(fake_name)} danger>Unselect</Button>
+          : <Button size="small" shape='round' type='primary' onClick={() => selectDev(fake_name)}>Select</Button>,
+      });
+    }
+
+    // Initialize Supabase real-time connection and pass setRealtimeData to handle updates
+    initSupabase(setRealtimeData, props.accessToken, props.refreshToken);
+
+    return () => {
+      // Add cleanup logic for the subscription if necessary
+    };
+  }, []);
+
+
+  const rankFilters = [...Array(12).keys()].map(x => { return { key: x, text: x + 1, value: x + 1 } });
 
   function renderEssays(entry: DataType) {
     const essays = [
@@ -178,8 +327,7 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
       </>
     )
   }
-  const essays = [
-  ]
+
 
   return (
     <Table
@@ -191,9 +339,12 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
           </div>,
         rowExpandable: (record) => record.name !== 'Not Expandable',
       }}
-      dataSource={props.data}
+      dataSource={realtimeData}  // Use realtimeData here
       scroll={{ x: "max-content" }}
-    />);
+    />
+  );
+
+
 };
 
 export default DeveloperSelectionTable;

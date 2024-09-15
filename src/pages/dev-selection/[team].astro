@@ -44,7 +44,7 @@ if (userRoleError || !userRole) {
 // Get Initial Dev Selection Data
 const { data: devSelectionData, error: devSelectionFetchError } = await supabase
   .from("pmtl_application_data")
-  .select("*, dev-selections(selected_by)")
+  .select(`*, dev_selections(selected_by)`)
   .order("rank_" + team, { ascending: true });
 if (devSelectionFetchError) {
   console.error(devSelectionFetchError);
@@ -56,9 +56,14 @@ const devData = devSelectionData?.map((entry, index) => {
     key: index,
   };
 });
+
+// Get already selected developers
+const selectedDevs = devSelectionData?.filter((row) =>
+  row.dev_selections.selected_by.includes(team),
+);
 ---
 
-<Layout title="dashboard">
+<Layout title={"JAM - " + projectNameReadable + " Dev Selection"}>
   <h1 class="text-center text-4xl my-4 font-semibold mx-2">
     {projectNameReadable} Developer Selection
   </h1>
@@ -72,21 +77,40 @@ const devData = devSelectionData?.map((entry, index) => {
       size="large"
       shape="round"
       href="/dashboard"
-      client:load>Back to Dashboard</Button
+      client:load
     >
+      Back to Dashboard
+    </Button>
   </div>
 
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card
       title={projectNameReadable + " Selected Developers"}
       class="text-center"
-      client:load>
-      <DeveloperSelectionTable data={[]} team={team} />
+      client:load
+    >
+      {
+        /* 
+      <DeveloperSelectionTable
+        data={selectedDevs}
+        team={team}
+        accessToken={accessToken}
+        refreshToken={refreshToken}
+        client:only="react"
+      />
+      */
+      }
     </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card title="All Developers" class="text-center" client:load>
-      <DeveloperSelectionTable data={devData} team={team} client:load />
+      <DeveloperSelectionTable
+        data={devData}
+        team={team}
+        accessToken={accessToken}
+        refreshToken={refreshToken}
+        client:only="react"
+      />
     </Card>
   </div>
 </Layout>
