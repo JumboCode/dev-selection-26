@@ -81,7 +81,7 @@ const selectedDevs = devSelectionData?.filter((row) =>
       size="large"
       shape="round"
       href="/dashboard"
-      client:load
+      client:only="react"
     >
       Back to Dashboard
     </Button>
@@ -90,7 +90,7 @@ const selectedDevs = devSelectionData?.filter((row) =>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card
       title={projectNameReadable + " Selected Developers"}   
-      client:load
+      client:only="react"
     >
       {
         /* 
@@ -106,7 +106,7 @@ const selectedDevs = devSelectionData?.filter((row) =>
     </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="All Developers" client:load>
+    <Card title="All Developers" client:only="react">
       <DeveloperSelectionTable
         data={devData}
         team={team}

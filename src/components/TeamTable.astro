@@ -35,7 +35,7 @@ const columns = [
   <Table
     dataSource={rows as any}
     columns={columns}
-    client:load
+    client:only="react"
     scroll={{ x: "max-content" }}
   />
 </div>
