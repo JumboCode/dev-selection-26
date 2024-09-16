@@ -11,6 +11,21 @@ const { cookies, redirect } = Astro;
 const accessToken = cookies.get("sb-access-token");
 const refreshToken = cookies.get("sb-refresh-token");
 
+interface TeamMember {
+  key: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface UserRole {
+  key: string;
+  first_name: string;
+  email: string;
+  team_name: string;
+  role: string;
+}
+
 if (!accessToken || !refreshToken) {
   return redirect("/");
 }
@@ -45,7 +60,7 @@ if (!userRole) {
   return redirect("/unauthorized");
 }
 
-let selectionStatus = undefined;
+let selectionStatus: any = undefined;
 // Get all active dev selection statuses (if board)
 if (userRole.team_name === "Board") {
   const { data: teamSelectStatus, error: teamSelectStatusError } =
@@ -75,21 +90,23 @@ if (teamLeadersError) {
   console.error(teamLeadersError);
 }
 
+interface ConfirmedDevsResults {
+  sensitive_application_data: {
+    full_name: string;
+    email: string;
+  };
+}
+
 const { data: confirmedDevsQuery, error: devsQueryError } = await supabase
-  .from("pmtl_application_data")
-  .select(
-    `
-  sensitive_application_data(
-    full_name,
-    email
-  )`,
-  )
+  .from<string, any>("pmtl_application_data")
+  .select(`sensitive_application_data(*)`)
   .eq("confirmed_team", userRole.team_name);
+
 if (devsQueryError) {
   console.error(devsQueryError);
 }
 
-const fullRoster = [];
+const fullRoster: any = [];
 teamLeadersQuery?.forEach((leader, index) => {
   fullRoster.push({
     key: index.toString(),
@@ -98,14 +115,19 @@ teamLeadersQuery?.forEach((leader, index) => {
     role: leader.role,
   });
 });
-confirmedDevsQuery?.forEach((dev) => {
-  fullRoster.push({
-    key: fullRoster.length.toString(),
-    email: dev.email,
-    name: dev.full_name,
-    role: "Developer",
+
+if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
+  confirmedDevsQuery.forEach((dev: any) => {
+    if (dev.sensitive_application_data) {
+      fullRoster.push({
+        key: fullRoster.length.toString(),
+        email: dev.sensitive_application_data.email,
+        name: dev.sensitive_application_data.full_name,
+        role: "Developer",
+      });
+    }
   });
-});
+}
 ---
 
 <Layout title="JAM - Dashboard">
@@ -119,7 +141,7 @@ confirmedDevsQuery?.forEach((dev) => {
     <SignOut />
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="My Dev Selection Status" classNames="text-center" client:visible>
+    <Card title="My Dev Selection Status" client:visible>
       <StatusTable rows={selectionStatus} client:load />
     </Card>
   </div>

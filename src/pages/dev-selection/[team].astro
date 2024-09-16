@@ -1,12 +1,16 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { supabase } from "../../lib/supabase";
-import SignOut from "../../components/SignOut.astro";
 import { Button, Card } from "antd";
 import DeveloperSelectionTable from "../../components/DeveloperSelectionTable.tsx";
 
 const { cookies, redirect } = Astro;
 const { team } = Astro.params;
+
+if (!team) {
+  return redirect("/dashboard");
+}
+
 const projectNameReadable = team
   .replace(/_/g, " ")
   .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -85,8 +89,7 @@ const selectedDevs = devSelectionData?.filter((row) =>
 
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card
-      title={projectNameReadable + " Selected Developers"}
-      class="text-center"
+      title={projectNameReadable + " Selected Developers"}   
       client:load
     >
       {
@@ -103,7 +106,7 @@ const selectedDevs = devSelectionData?.filter((row) =>
     </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="All Developers" class="text-center" client:load>
+    <Card title="All Developers" client:load>
       <DeveloperSelectionTable
         data={devData}
         team={team}

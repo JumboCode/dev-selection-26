@@ -10,23 +10,7 @@ interface Props {
 
 const { rows } = Astro.props;
 
-import { Space, Table } from "antd";
-const { Column, ColumnGroup } = Table;
-
-const dataSource = [
-  {
-    key: "1",
-    name: "Mike",
-    age: 32,
-    address: "10 Downing Street",
-  },
-  {
-    key: "2",
-    name: "John",
-    age: 42,
-    address: "10 Downing Street",
-  },
-];
+import { Table } from "antd";
 
 const columns = [
   {
@@ -49,7 +33,7 @@ const columns = [
 
 <div class="bg-white rounded-xl">
   <Table
-    dataSource={rows}
+    dataSource={rows as any}
     columns={columns}
     client:load
     scroll={{ x: "max-content" }}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { supabase } from '../lib/supabase';
@@ -39,6 +39,9 @@ interface DataType {
   jumbocode_previous_projects: string;
   fake_name: string;
   confirmed_team: boolean;  // Assuming confirmed_team is a boolean
+  dev_selections: {
+    selected_by: string
+  }
 }
 
 
@@ -90,7 +93,7 @@ const columns: TableColumnsType<DataType> = [
         value: "Masters Student (non-Tufts undergrad)"
       }
     ],
-    onFilter: (val, record) => record.class_year === val || record.class_year === val.toString(),
+    onFilter: (val, record) => record.class_year === val,
     sorter: {
       compare: (a, b) => a.class_year - b.class_year
     },
@@ -118,10 +121,10 @@ const columns: TableColumnsType<DataType> = [
 
 
 const RANKING_IDX = 2; const SELECT_IDX = 0;
-const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
+const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   const [realtimeData, setRealtimeData] = useState<DataType[]>(props.data);
-  
-  async function selectDev(fake_name) {
+
+  async function selectDev(fake_name: string) {
     const index = realtimeData.findIndex(item => item.fake_name === fake_name)
     if (index > -1) {
       console.log(realtimeData[index])
@@ -130,17 +133,17 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
       if (!selections) {
         newSelections = props.team;
       }
-      
+
       else if (selections.includes(props.team)) {
         return;
       }
-      
+
       else {
         newSelections = selections + "," + props.team
       }
       console.log(newSelections)
-      await setRealtimeData((currentData) => {
-        const newData = [...currentData];  
+      setRealtimeData((currentData) => {
+        const newData = [...currentData];
         const updatedSelections = {
           ...newData[index],
           dev_selections: { selected_by: newSelections }
@@ -149,7 +152,7 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
         return newData;  // Return the updated state
 
       });
-      const { data: addTeamSel, error: teamSelError } = await supabase
+      const { error: teamSelError } = await supabase
         .from("dev_selections")
         .update({ selected_by: newSelections })
         .eq("fake_name", fake_name)
@@ -161,21 +164,15 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
     }
   }
 
-  async function unselectDev(fake_name) {
+  async function unselectDev(fake_name: string) {
     const index = realtimeData.findIndex(item => item.fake_name === fake_name);
     console.log(index);
     if (index > -1) {
       const selections = realtimeData[index].dev_selections.selected_by;
-      console.log(selections)
-      /*
-      if (!selections || !selections.includes(props.team)) {
-        return;
-      }
-        */
       const newSelections = selections.replace("," + props.team, "").replace(props.team, "");
-      
-      await setRealtimeData((currentData) => {
-        const newData = [...currentData];  
+
+      setRealtimeData((currentData) => {
+        const newData = [...currentData];
         const updatedSelections = {
           ...newData[index],
           dev_selections: { selected_by: newSelections }
@@ -184,33 +181,36 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
         return newData;  // Return the updated state
 
       });
-      const { data: addTeamSel, error: teamSelError } = await supabase
+      const { error: teamSelError } = await supabase
         .from("dev_selections")
         .update({ selected_by: newSelections })
         .eq("fake_name", fake_name)
       if (teamSelError) {
         console.error(teamSelError);
       }
-      console.log(addTeamSel);
     }
   }
 
-  async function initSupabase(setRealtimeData, accessToken, refreshToken) {
+  async function initSupabase(setRealtimeData: any, accessToken: { value: string }, refreshToken: { value: string }) {
     if (!accessToken || !refreshToken)
       return;
-    const { data: userData, error: authError } = await supabase.auth.setSession({
+    const { error: authError } = await supabase.auth.setSession({
       refresh_token: refreshToken.value,
       access_token: accessToken.value,
     });
+    if (authError) {
+      console.error(authError)
+      return;
+    }
 
-    const channel = supabase
+    supabase
       .channel('custom-all-channel')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'dev_selections' },
         (payload) => {
           console.log('Change received!', payload);
-          setRealtimeData((currentData) => {
+          setRealtimeData((currentData: DataType[]) => {
             const newData = [...currentData];  // Clone the current data for immutability
 
             if (payload.eventType === 'UPDATE') {
@@ -243,22 +243,22 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
 
   useEffect(() => {
     // Create columns based on team names (this part remains the same)
-    if (columns.at(RANKING_IDX).title !== "Ranking") {
+    if (columns[RANKING_IDX]?.title !== "Ranking") {
       columns.splice(RANKING_IDX, 0,
         {
           title: "Ranking",
           dataIndex: "rank_" + props.team,
           key: "rank_" + props.team,
           sorter: {
-            compare: (a, b) => a["rank_" + props.team] - b["rank_" + props.team]
+            compare: (a: any, b: any) => (a["rank_" + props.team]) - (b["rank_" + props.team])
           },
           filters: rankFilters,
-          onFilter: (val, record) => record["rank_" + props.team] === val
+          onFilter: (val: any, record: any) => (record["rank_" + props.team]) === val
         }
       );
     }
 
-    if (columns.at(0).title !== "Select") {
+    if (columns[SELECT_IDX]?.title !== "Select") {
       columns.splice(SELECT_IDX, 0, {
         title: 'Select',
         dataIndex: 'select',
@@ -337,7 +337,7 @@ const DeveloperSelectionTable: React.FC = (props: DevSelectionTableProps) => {
           <div className="max-w-96 md:max-w-screen-sm lg:max-w-screen-md xl:max-w-screen-lg">
             {renderEssays(record)}
           </div>,
-        rowExpandable: (record) => record.name !== 'Not Expandable',
+        rowExpandable: () => true,
       }}
       dataSource={realtimeData}  // Use realtimeData here
       scroll={{ x: "max-content" }}
