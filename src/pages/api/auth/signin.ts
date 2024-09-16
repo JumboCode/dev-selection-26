@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ redirect }) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provider as Provider,
       options: {
-        redirectTo: "http://localhost:4321/api/auth/callback",
+        redirectTo: "https://dev-selection.vercel.app/api/auth/callback",
         queryParams: {
           hd: "tufts.edu"
         }

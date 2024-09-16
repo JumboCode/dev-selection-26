@@ -23,5 +23,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     path: "/",
   });
 
+  console.log("DASHBOARD")
+
   return redirect("/dashboard");
 };
