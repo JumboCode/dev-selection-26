@@ -1,0 +1,21 @@
+---
+// Layout and component imports
+import Layout from "../layouts/Layout.astro";
+import Login from "../components/Login.astro";
+
+const { cookies, redirect } = Astro;
+
+const accessToken = cookies.get("sb-access-token");
+const refreshToken = cookies.get("sb-refresh-token");
+
+if (accessToken && refreshToken) {
+	console.log(accessToken, refreshToken);
+	return redirect("/dashboard");
+}
+---
+
+<Layout title="JumboCode Application Management">
+	<main>
+		<Login />
+	</main>
+</Layout>
