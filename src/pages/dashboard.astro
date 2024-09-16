@@ -141,12 +141,12 @@ if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
     <SignOut />
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="My Dev Selection Status" client:visible>
+    <Card title="My Dev Selection Status" client:only="react">
       <StatusTable rows={selectionStatus} client:only="react" />
     </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="My Team" client:visible>
+    <Card title="My Team" client:only="react">
       <TeamTable rows={fullRoster} />
     </Card>
   </div>
