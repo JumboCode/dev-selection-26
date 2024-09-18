@@ -141,17 +141,6 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       else {
         newSelections = selections + "," + props.team
       }
-      console.log(newSelections)
-      setRealtimeData((currentData) => {
-        const newData = [...currentData];
-        const updatedSelections = {
-          ...newData[index],
-          dev_selections: { selected_by: newSelections }
-        }
-        newData[index] = updatedSelections;
-        return newData;  // Return the updated state
-
-      });
       const { error: teamSelError } = await supabase
         .from("dev_selections")
         .update({ selected_by: newSelections })
@@ -171,16 +160,6 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       const selections = realtimeData[index].dev_selections.selected_by;
       const newSelections = selections.replace("," + props.team, "").replace(props.team, "");
 
-      setRealtimeData((currentData) => {
-        const newData = [...currentData];
-        const updatedSelections = {
-          ...newData[index],
-          dev_selections: { selected_by: newSelections }
-        }
-        newData[index] = updatedSelections;
-        return newData;  // Return the updated state
-
-      });
       const { error: teamSelError } = await supabase
         .from("dev_selections")
         .update({ selected_by: newSelections })
