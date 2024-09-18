@@ -6,12 +6,14 @@ export const POST: APIRoute = async ({ redirect }) => {
   const provider = "google"; // Hard coded for now, change later if we add additional sign in methods
 
   const validProviders = ["google"];
+  const redirectLink = process.env.VITE_BASE_URL ? process.env.VITE_BASE_URL : "https://jam.gsess.dev/api/auth/callback";
+  console.log(process.env)
 
   if (provider && validProviders.includes(provider)) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provider as Provider,
       options: {
-        redirectTo: "https://dev-selection.vercel.app/api/auth/callback",
+        redirectTo: redirectLink,
         queryParams: {
           hd: "tufts.edu"
         }
