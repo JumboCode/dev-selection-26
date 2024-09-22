@@ -9,6 +9,7 @@ interface DataType {
 
 interface StatusTableProps {
   rows: DataType[]
+  role: string
 }
 
 const columns: TableProps<DataType>['columns'] = [
@@ -48,7 +49,7 @@ const columns: TableProps<DataType>['columns'] = [
     key: 'dev_selections',
     render: (_, { status, team_name }) => (
       <Space size="middle">
-        <Button type="primary" href={"/dev-selection/" + team_name} disabled={status !== "In Progress"}>
+        <Button type="primary" href={"/dev-selection/" + team_name} disabled={status === "Complete"}>
           View/Select Developers
         </Button>
       </Space>

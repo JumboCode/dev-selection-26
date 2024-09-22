@@ -3,6 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import { supabase } from "../../lib/supabase";
 import { Button, Card } from "antd";
 import DeveloperSelectionTable from "../../components/DeveloperSelectionTable.tsx";
+import { createSemanticDiagnosticsBuilderProgram } from "typescript";
 
 const { cookies, redirect } = Astro;
 const { team } = Astro.params;
@@ -61,11 +62,24 @@ const devData = devSelectionData?.map((entry, index) => {
   };
 });
 
-
 // Get already selected developers
-const selectedDevs = devSelectionData?.filter((row) =>{
-  return row.dev_selections.selected_by.includes(team)
+const selectedDevs = devSelectionData?.filter((row) => {
+  return row.dev_selections.selected_by.includes(team);
 });
+
+console.log(selectedDevs)
+
+const { data: status, error: statusError } = await supabase
+  .from("team_status")
+  .select("status")
+  .eq("team_name", team)
+  .maybeSingle();
+if (statusError) {
+  console.error(statusError);
+}
+if (status.status === "Complete" && userRole.team_name !== "Board") {
+  return redirect("/unauthorized")
+}
 ---
 
 <Layout title={"JAM - " + projectNameReadable + " Dev Selection"}>
@@ -88,25 +102,6 @@ const selectedDevs = devSelectionData?.filter((row) =>{
     </Button>
   </div>
 
-  {/*
-  <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card
-      title={projectNameReadable + " Selected Developers"}   
-      client:only="react"
-    >
-      <DeveloperSelectionTable
-        channel={"channel-1"}
-        onlySelected={true}
-        data={selectedDevs}
-        team={team}
-        accessToken={accessToken}
-        refreshToken={refreshToken}
-        client:only="react"
-      />
-    
-    </Card>
-  </div>
-  */}
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card title="Developer Applications" client:only="react">
       <DeveloperSelectionTable
@@ -118,6 +113,47 @@ const selectedDevs = devSelectionData?.filter((row) =>{
         refreshToken={refreshToken}
         client:only="react"
       />
+    </Card>
+  </div>
+
+  <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
+    <Card title={"Board Approval"} client:only="react">
+      <p>Developer Selection Checklist:</p>
+      <ul class="list-disc ml-8 mb-4">
+        <li class="list-item">Have you selected 10 developers?</li>
+        <li class="list-item">
+          Have you selected 1-3 developers for the waitlist?
+        </li>
+        <li class="list-item">
+          Have you selected at least one first-year developer? (Class of 2028)
+        </li>
+      </ul>
+      {
+        userRole.team_name === "Board" ? (
+          <div>
+            <h2 class="mb-2 text-xl font-semibold">
+              Board: Approve Developer Selections
+            </h2>
+            <Button
+              client:only="react"
+              type="primary"
+              disabled={status.status !== "Under Review"}
+              href={"/api/approve?team=" + team} 
+            >
+              Approve Selections
+            </Button>
+          </div>
+        ) : (
+          <div>
+            <h2 class="mb-2 text-xl font-semibold">
+              {userRole.role} ({userRole.team_name}) Send For Approval
+            </h2>
+            <Button client:only="react" type="primary" href="/api/sendapproval">
+              Send for Board Approval
+            </Button>
+          </div>
+        )
+      }
     </Card>
   </div>
 </Layout>
