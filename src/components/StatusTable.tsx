@@ -9,7 +9,6 @@ interface DataType {
 
 interface StatusTableProps {
   rows: DataType[]
-  role: string
 }
 
 const columns: TableProps<DataType>['columns'] = [

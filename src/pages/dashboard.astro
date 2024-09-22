@@ -142,7 +142,7 @@ if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card title="My Dev Selection Status" client:only="react">
-      <StatusTable rows={selectionStatus} client:only="react" />
+      <StatusTable rows={selectionStatus as any} client:only="react" />
     </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">

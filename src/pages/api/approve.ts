@@ -7,7 +7,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   const refreshToken = cookies.get("sb-refresh-token");
 
   if (!accessToken || !refreshToken) {
-    return redirect("/", { message: "Session expired. Please log in again." });
+    return redirect("/");
   }
 
   const { data: userData, error: authError } = await supabase.auth.setSession({
