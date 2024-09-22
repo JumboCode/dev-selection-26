@@ -49,7 +49,9 @@ interface DevSelectionTableProps {
   data: DataType[],
   team: string,
   accessToken: any,
-  refreshToken: any
+  refreshToken: any,
+  channel: string,
+  onlySelected: boolean
 }
 
 const columns: TableColumnsType<DataType> = [
@@ -107,12 +109,12 @@ const columns: TableColumnsType<DataType> = [
   },
   {
     title: 'In person this semester?', dataIndex: 'in_person_this_semester', key: 'in_person_this_semester',
-    filters: [{ text: "Yes", value: "Yes" }, { text: "No", value: "No" }],
+    filters: [{ text: "Yes", value: "Yes" }, { text: "Studying remotely", value: "Studying remotely" }, { text: "Taking a gap semester", value: "Taking a gap semester" }],
     onFilter: (val, record) => record.in_person_this_semester === val
   },
   {
     title: 'In person next semester?', dataIndex: 'in_person_next_semester', key: 'in_person_next_semester',
-    filters: [{ text: "Yes", value: "Yes" }, { text: "No", value: "No" }],
+    filters: [{ text: "Yes", value: "Yes" }, { text: "Studying remotely", value: "Studying remotely" }, { text: "Taking a gap semester", value: "Taking a gap semester" }],
     onFilter: (val, record) => record.in_person_next_semester === val
   },
   { title: 'Familiar Technologies', dataIndex: 'technologies', key: 'technologies' },
@@ -133,6 +135,20 @@ async function getSelectionsOnDev(supabase, fake_name) {
 
 }
 
+async function getDevInfo(fake_name: string) {
+  const { data: selectionsQuery, error: selectionsQueryError } = await supabase
+    .from("pmtl_application_data")
+    .select(`*, dev_selections(selected_by)`)
+    .eq("fake_name", fake_name)
+    .maybeSingle()
+  if (selectionsQueryError) {
+    console.error(selectionsQueryError);
+    return;
+  }
+  return selectionsQuery;
+
+}
+
 const RANKING_IDX = 2; const SELECT_IDX = 0;
 const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   const [realtimeData, setRealtimeData] = useState<DataType[]>(props.data);
@@ -148,7 +164,7 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
         return;
       }
       else {
-        newSelections = selections + "," + props.team
+        newSelections = currentSelections + "," + props.team
       }
       const { error: teamSelError } = await supabase
         .from("dev_selections")
@@ -163,7 +179,10 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   async function unselectDev(fake_name: string) {
     const currentSelections = await getSelectionsOnDev(supabase, fake_name);
     if (currentSelections !== null) {
-      const newSelections = currentSelections.replace("," + props.team, "").replace(props.team, "");
+      let newSelections = currentSelections.replace("," + props.team, "").replace(props.team, "");
+      if (newSelections.startsWith(",")) {
+        newSelections = newSelections.substring(1);
+      }
 
       const { error: teamSelError } = await supabase
         .from("dev_selections")
@@ -187,18 +206,33 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       return;
     }
     supabase
-      .channel('custom-all-channel')
+      .channel(props.channel)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'dev_selections' },
-        (payload) => {
+        async (payload) => {
           console.log('Change received!', payload);
+
+          let prefetchedData = null;
+          const index = realtimeData.findIndex(item => item.fake_name === payload.new.fake_name);
+          if (props.onlySelected && index === -1 && payload.new.selected_by.includes(props.team)) {
+            prefetchedData = await getDevInfo(payload.new.fake_name);
+          }
+
           setRealtimeData((currentData: DataType[]) => {
             const newData = [...currentData];  // Clone the current data for immutability
-
             if (payload.eventType === 'UPDATE') {
-              const index = newData.findIndex(item => item.fake_name === payload.new.fake_name);
+              
+              if (props.onlySelected && index === -1 && payload.new.selected_by.includes(props.team)) {
+                return [...currentData, prefetchedData];
+              }
 
+              if (props.onlySelected && payload.new.selected_by.indexOf(props.team) == -1 && index > -1) {
+                console.log(payload.new.selected_by)
+                newData.splice(index, 1);
+                return newData;
+              }
+                
               // Only update if the item is found and the selected_by field has a value
               if (index > -1) {
                 const updatedSelections = {
@@ -215,7 +249,7 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
               }
             }
 
-            return currentData;  // If no update, return the current state to avoid unnecessary re-renders
+            return currentData;
           });
 
         }
@@ -316,6 +350,15 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
 
   return (
     <Table
+      rowClassName={(record, index) => {
+        if (record.dev_selections.selected_by === "") {
+          return "bg-white";
+        }
+        if (record.dev_selections.selected_by.replaceAll(",", "").trim() === props.team) {
+          return "bg-green-100";
+        }
+        return "bg-orange-100";
+      }}
       columns={columns}
       expandable={{
         expandedRowRender: (record) =>

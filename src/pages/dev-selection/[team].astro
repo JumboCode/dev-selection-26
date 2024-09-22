@@ -94,21 +94,23 @@ const selectedDevs = devSelectionData?.filter((row) =>{
       client:only="react"
     >
       {
-        /* 
       <DeveloperSelectionTable
+        channel={"channel-1"}
+        onlySelected={true}
         data={selectedDevs}
         team={team}
         accessToken={accessToken}
         refreshToken={refreshToken}
         client:only="react"
       />
-      */
       }
     </Card>
   </div>
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card title="All Developers" client:only="react">
       <DeveloperSelectionTable
+        channel="channel-2"
+        onlySelected={false}
         data={devData}
         team={team}
         accessToken={accessToken}
