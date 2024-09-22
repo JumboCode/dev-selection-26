@@ -119,25 +119,34 @@ const columns: TableColumnsType<DataType> = [
   { title: 'Personal Portfolio/Other Links', dataIndex: 'links', key: 'links' },
 ];
 
+async function getSelectionsOnDev(supabase, fake_name) {
+  const { data: selectionsQuery, error: selectionsQueryError } = await supabase
+    .from("dev_selections")
+    .select("selected_by")
+    .eq("fake_name", fake_name)
+    .maybeSingle()
+  if (selectionsQueryError) {
+    console.error(selectionsQueryError);
+    return;
+  }
+  return selectionsQuery.selected_by;
+
+}
 
 const RANKING_IDX = 2; const SELECT_IDX = 0;
 const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   const [realtimeData, setRealtimeData] = useState<DataType[]>(props.data);
 
   async function selectDev(fake_name: string) {
-    const index = realtimeData.findIndex(item => item.fake_name === fake_name)
-    if (index > -1) {
-      console.log(realtimeData[index])
-      const selections = realtimeData[index].dev_selections.selected_by;
+    const currentSelections = await getSelectionsOnDev(supabase, fake_name);
+    if (currentSelections !== null) {
       let newSelections = "";
-      if (!selections) {
+      if (!currentSelections) {
         newSelections = props.team;
       }
-
-      else if (selections.includes(props.team)) {
+      else if (currentSelections.includes(props.team)) {
         return;
       }
-
       else {
         newSelections = selections + "," + props.team
       }
@@ -148,17 +157,13 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       if (teamSelError) {
         console.error(teamSelError);
       }
-
-
     }
   }
 
   async function unselectDev(fake_name: string) {
-    const index = realtimeData.findIndex(item => item.fake_name === fake_name);
-    console.log(index);
-    if (index > -1) {
-      const selections = realtimeData[index].dev_selections.selected_by;
-      const newSelections = selections.replace("," + props.team, "").replace(props.team, "");
+    const currentSelections = await getSelectionsOnDev(supabase, fake_name);
+    if (currentSelections !== null) {
+      const newSelections = currentSelections.replace("," + props.team, "").replace(props.team, "");
 
       const { error: teamSelError } = await supabase
         .from("dev_selections")
@@ -181,7 +186,6 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       console.error(authError)
       return;
     }
-
     supabase
       .channel('custom-all-channel')
       .on(
@@ -301,8 +305,10 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
 
     return essays.map((essay) =>
       <>
-        <p className='font-semibold text-md'>{essay.question}</p>
-        <p className='mb-2'>{essay.response}</p>
+        <div className='border-4 rounded border-gray-200 m-1 my-2 p-2'>
+          <p className='font-semibold text-md mb-2'>{essay.question}</p>
+          <p className='mb-2'>{essay.response}</p>
+        </div>
       </>
     )
   }

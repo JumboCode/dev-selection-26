@@ -61,10 +61,11 @@ const devData = devSelectionData?.map((entry, index) => {
   };
 });
 
+
 // Get already selected developers
-const selectedDevs = devSelectionData?.filter((row) =>
-  row.dev_selections.selected_by.includes(team),
-);
+const selectedDevs = devSelectionData?.filter((row) =>{
+  return row.dev_selections.selected_by.includes(team)
+});
 ---
 
 <Layout title={"JAM - " + projectNameReadable + " Dev Selection"}>

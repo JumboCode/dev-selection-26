@@ -64,7 +64,7 @@ let selectionStatus: any = undefined;
 // Get all active dev selection statuses (if board)
 if (userRole.team_name === "Board") {
   const { data: teamSelectStatus, error: teamSelectStatusError } =
-    await supabase.from("team-status").select("*");
+    await supabase.from("team_status").select("*");
   if (teamSelectStatusError) {
     console.error(teamSelectStatusError);
   }
@@ -72,7 +72,7 @@ if (userRole.team_name === "Board") {
 } else {
   const { data: teamSelectStatus, error: teamSelectStatusError } =
     await supabase
-      .from("team-status")
+      .from("team_status")
       .select("*")
       .eq("team_name", userRole.team_name);
   selectionStatus = teamSelectStatus;
