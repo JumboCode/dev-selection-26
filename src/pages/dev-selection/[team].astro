@@ -48,7 +48,7 @@ if (userRoleError || !userRole) {
 // Get Initial Dev Selection Data
 const { data: devSelectionData, error: devSelectionFetchError } = await supabase
   .from("pmtl_application_data")
-  .select(`*, dev_selections(selected_by)`)
+  .select(`*, dev_selections(selected_by, waitlisted_by)`)
   .order("rank_" + team, { ascending: true });
 if (devSelectionFetchError) {
   console.error(devSelectionFetchError);
@@ -88,12 +88,12 @@ const selectedDevs = devSelectionData?.filter((row) =>{
     </Button>
   </div>
 
+  {/*
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card
       title={projectNameReadable + " Selected Developers"}   
       client:only="react"
     >
-      {
       <DeveloperSelectionTable
         channel={"channel-1"}
         onlySelected={true}
@@ -103,11 +103,12 @@ const selectedDevs = devSelectionData?.filter((row) =>{
         refreshToken={refreshToken}
         client:only="react"
       />
-      }
+    
     </Card>
   </div>
+  */}
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="All Developers" client:only="react">
+    <Card title="Developer Applications" client:only="react">
       <DeveloperSelectionTable
         channel="channel-2"
         onlySelected={false}

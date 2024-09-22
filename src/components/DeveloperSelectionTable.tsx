@@ -40,7 +40,8 @@ interface DataType {
   fake_name: string;
   confirmed_team: boolean;  // Assuming confirmed_team is a boolean
   dev_selections: {
-    selected_by: string
+    selected_by: string,
+    waitlisted_by: string
   }
 }
 
@@ -55,15 +56,7 @@ interface DevSelectionTableProps {
 }
 
 const columns: TableColumnsType<DataType> = [
-  {
-    title: 'Selected By',
-    dataIndex: 'dev_selections',
-    key: 'dev_selections',
-    render: (_, { dev_selections }) => <p>{dev_selections.selected_by}</p>
-
-  },
   { title: 'Fake Name', dataIndex: 'fake_name', key: 'fake_name' },
-  { title: 'Board Notes', dataIndex: 'board_notes', key: 'board_notes' },
   { title: 'Pronouns', dataIndex: 'pronouns', key: 'pronouns' },
   {
     title: 'Class Year',
@@ -100,6 +93,7 @@ const columns: TableColumnsType<DataType> = [
       compare: (a, b) => a.class_year - b.class_year
     },
   },
+  { title: 'Board Notes', dataIndex: 'board_notes', key: 'board_notes' },
   {
     title: 'Underrespresented in STEM',
     dataIndex: 'underrepresented_group_in_stem',
@@ -121,16 +115,19 @@ const columns: TableColumnsType<DataType> = [
   { title: 'Personal Portfolio/Other Links', dataIndex: 'links', key: 'links' },
 ];
 
-async function getSelectionsOnDev(supabase: any, fake_name: string) {
+async function getSelectionsOnDev(supabase: any, fake_name: string, waitlist: boolean) {
   const { data: selectionsQuery, error: selectionsQueryError } = await supabase
     .from("dev_selections")
-    .select("selected_by")
+    .select("selected_by, waitlisted_by")
     .eq("fake_name", fake_name)
     .maybeSingle()
   if (selectionsQueryError) {
     console.error(selectionsQueryError);
     return;
   }
+
+  if (waitlist)
+    return selectionsQuery.waitlisted_by;
   return selectionsQuery.selected_by;
 
 }
@@ -149,12 +146,13 @@ async function getDevInfo(fake_name: string) {
 
 }
 
-const RANKING_IDX = 2; const SELECT_IDX = 0;
+const RANKING_IDX = 0; const SELECT_IDX = 0; const SELECTED_BY_IDX = 1;
+const WAITLIST_BY_IDX = 2;
 const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   const [realtimeData, setRealtimeData] = useState<DataType[]>(props.data);
 
   async function selectDev(fake_name: string) {
-    const currentSelections = await getSelectionsOnDev(supabase, fake_name);
+    const currentSelections = await getSelectionsOnDev(supabase, fake_name, false);
     if (currentSelections !== null) {
       let newSelections = "";
       if (!currentSelections) {
@@ -177,7 +175,7 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   }
 
   async function unselectDev(fake_name: string) {
-    const currentSelections = await getSelectionsOnDev(supabase, fake_name);
+    const currentSelections = await getSelectionsOnDev(supabase, fake_name, false);
     if (currentSelections !== null) {
       let newSelections = currentSelections.replace("," + props.team, "").replace(props.team, "");
       if (newSelections.startsWith(",")) {
@@ -187,6 +185,47 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       const { error: teamSelError } = await supabase
         .from("dev_selections")
         .update({ selected_by: newSelections })
+        .eq("fake_name", fake_name)
+      if (teamSelError) {
+        console.error(teamSelError);
+      }
+    }
+  }
+
+  async function waitlistDev(fake_name: string) {
+    const currentSelections = await getSelectionsOnDev(supabase, fake_name, true);
+    if (currentSelections !== null) {
+      let newSelections = "";
+      if (!currentSelections) {
+        newSelections = props.team;
+      }
+      else if (currentSelections.includes(props.team)) {
+        return;
+      }
+      else {
+        newSelections = currentSelections + "," + props.team
+      }
+      const { error: teamSelError } = await supabase
+        .from("dev_selections")
+        .update({ waitlisted_by: newSelections })
+        .eq("fake_name", fake_name)
+      if (teamSelError) {
+        console.error(teamSelError);
+      }
+    }
+  }
+
+  async function unwaitlistDev(fake_name: string) {
+    const currentSelections = await getSelectionsOnDev(supabase, fake_name, true);
+    if (currentSelections !== null) {
+      let newSelections = currentSelections.replace("," + props.team, "").replace(props.team, "");
+      if (newSelections.startsWith(",")) {
+        newSelections = newSelections.substring(1);
+      }
+
+      const { error: teamSelError } = await supabase
+        .from("dev_selections")
+        .update({ waitlisted_by: newSelections })
         .eq("fake_name", fake_name)
       if (teamSelError) {
         console.error(teamSelError);
@@ -205,53 +244,31 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
       console.error(authError)
       return;
     }
+
     supabase
       .channel(props.channel)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'dev_selections' },
         async (payload) => {
-          console.log('Change received!', payload);
+          const fake_name = (payload.new as any).fake_name;
+          const teamInSelectedBy = (payload.new as any).selected_by.includes(props.team);
+          const index = realtimeData.findIndex(item => item.fake_name === fake_name);
 
-          let prefetchedData = null;
-          const index = realtimeData.findIndex(item => item.fake_name === (payload.new as any).fake_name);
-          if (props.onlySelected && index === -1 && (payload.new as any).selected_by.includes(props.team)) {
-            prefetchedData = await getDevInfo((payload.new as any).fake_name);
-          }
-
-          setRealtimeData((currentData: DataType[]) => {
-            const newData = [...currentData];  // Clone the current data for immutability
-            if (payload.eventType === 'UPDATE') {
-              
-              if (props.onlySelected && index === -1 && payload.new.selected_by.includes(props.team)) {
-                return [...currentData, prefetchedData];
-              }
-
-              if (props.onlySelected && payload.new.selected_by.indexOf(props.team) == -1 && index > -1) {
-                console.log(payload.new.selected_by)
-                newData.splice(index, 1);
-                return newData;
-              }
-                
-              // Only update if the item is found and the selected_by field has a value
-              if (index > -1) {
-                const updatedSelections = {
-                  ...newData[index],
-                  dev_selections: { selected_by: payload.new.selected_by }
+          if (index > -1) {
+            // Update the record if it exists in the state
+            setRealtimeData((currentData: any) => {
+              const updatedData = [...currentData];
+              updatedData[index] = {
+                ...updatedData[index],
+                dev_selections: { 
+                  selected_by: (payload.new as any).selected_by,
+                  waitlisted_by: (payload.new as any).waitlisted_by
                 }
-                newData[index] = updatedSelections;
-
-                // Debugging information
-                console.log('Updated selected_by:', newData[index].dev_selections.selected_by);
-                console.log('Updated item index:', index);
-
-                return newData;  // Return the updated state
-              }
-            }
-
-            return currentData;
-          });
-
+              };
+              return updatedData;
+            });
+          }
         }
       )
       .subscribe();
@@ -270,7 +287,7 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
             compare: (a: any, b: any) => (a["rank_" + props.team]) - (b["rank_" + props.team])
           },
           filters: rankFilters,
-          onFilter: (val: any, record: any) => (record["rank_" + props.team]) === val
+          onFilter: (val: any, record: any) => (record["rank_" + props.team]) === val,
         }
       );
     }
@@ -280,10 +297,94 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
         title: 'Select',
         dataIndex: 'select',
         key: 'select',
-        render: (_, { dev_selections, fake_name }) => dev_selections.selected_by && dev_selections.selected_by.includes(props.team)
-          ? <Button size="small" shape='round' type='primary' onClick={() => unselectDev(fake_name)} danger>Unselect</Button>
-          : <Button size="small" shape='round' type='primary' onClick={() => selectDev(fake_name)}>Select</Button>,
+        render: (_, { dev_selections, fake_name }) => (
+          <>
+            {dev_selections.selected_by && dev_selections.selected_by.includes(props.team) ? (
+              <Button
+                size="small"
+                shape="round"
+                type="primary"
+                onClick={() => unselectDev(fake_name)}
+                danger
+              >
+                Unselect
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                shape="round"
+                type="primary"
+                onClick={() => selectDev(fake_name)}
+              >
+                Select
+              </Button>
+            )}
+
+            <div className='my-2' />
+        
+            {dev_selections.waitlisted_by && dev_selections.waitlisted_by.includes(props.team) ? (
+              <Button
+                size="small"
+                shape="round"
+                type="primary"
+                onClick={() => unwaitlistDev(fake_name)}
+                danger
+              >
+                Un-Waitlist
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                shape="round"
+                type="primary"
+                onClick={() => waitlistDev(fake_name)}
+              >
+                Waitlist
+              </Button>
+            )}
+          </>
+        )
+        
+
       });
+
+      if (columns[SELECTED_BY_IDX]?.title !== "Selected By") {
+        columns.splice(SELECTED_BY_IDX, 0,
+          {
+            title: "Selected By",
+            dataIndex: "selected_by",
+            key: "selected_by",
+            filters: [{ text: "Selected by " + props.team, value: props.team }],
+            onFilter: (val: any, record: any) => {
+              return record.dev_selections.selected_by.indexOf(props.team) > -1
+            },
+            render: (_, { dev_selections }) => <p>{dev_selections.selected_by}</p>,
+            sorter: {
+              compare: (a: any, b: any) => (b.dev_selections.selected_by.indexOf(props.team)) - (a.dev_selections.selected_by.indexOf(props.team))
+            },
+          }
+        );
+      }
+
+      if (columns[WAITLIST_BY_IDX]?.title !== "Waitlisted By") {
+        columns.splice(WAITLIST_BY_IDX, 0,
+          {
+            title: "Waitlisted By",
+            dataIndex: "waitlisted_by",
+            key: "waitlisted_by",
+            filters: [{ text: "Waitlisted by " + props.team, value: props.team }],
+            onFilter: (val: any, record: any) => {
+              return record.dev_selections.waitlisted_by.indexOf(props.team) > -1
+            },
+            render: (_, { dev_selections }) => <p>{dev_selections.waitlisted_by}</p>,
+            sorter: {
+              compare: (a: any, b: any) => (b.dev_selections.waitlisted_by.indexOf(props.team)) - (a.dev_selections.waitlisted_by.indexOf(props.team))
+            },
+          }
+        );
+      }
+
+
     }
 
     // Initialize Supabase real-time connection and pass setRealtimeData to handle updates
@@ -352,12 +453,12 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
     <Table
       rowClassName={(record, index) => {
         if (record.dev_selections.selected_by === "") {
-          return "bg-white";
+          return "bg-white -my-2";
         }
         if (record.dev_selections.selected_by.replaceAll(",", "").trim() === props.team) {
-          return "bg-green-100";
+          return "bg-green-100 -my-2";
         }
-        return "bg-orange-100";
+        return "bg-orange-100 -my-2";
       }}
       columns={columns}
       expandable={{
