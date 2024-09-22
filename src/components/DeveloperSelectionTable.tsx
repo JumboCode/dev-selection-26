@@ -121,7 +121,7 @@ const columns: TableColumnsType<DataType> = [
   { title: 'Personal Portfolio/Other Links', dataIndex: 'links', key: 'links' },
 ];
 
-async function getSelectionsOnDev(supabase, fake_name) {
+async function getSelectionsOnDev(supabase: any, fake_name: string) {
   const { data: selectionsQuery, error: selectionsQueryError } = await supabase
     .from("dev_selections")
     .select("selected_by")
@@ -214,9 +214,9 @@ const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
           console.log('Change received!', payload);
 
           let prefetchedData = null;
-          const index = realtimeData.findIndex(item => item.fake_name === payload.new.fake_name);
-          if (props.onlySelected && index === -1 && payload.new.selected_by.includes(props.team)) {
-            prefetchedData = await getDevInfo(payload.new.fake_name);
+          const index = realtimeData.findIndex(item => item.fake_name === (payload.new as any).fake_name);
+          if (props.onlySelected && index === -1 && (payload.new as any).selected_by.includes(props.team)) {
+            prefetchedData = await getDevInfo((payload.new as any).fake_name);
           }
 
           setRealtimeData((currentData: DataType[]) => {
