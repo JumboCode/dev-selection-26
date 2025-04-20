@@ -2,6 +2,9 @@
 
 A web-based system to anonymously select developers for JumboCode teams.
 
+## Restoring the database
+I've included a database backup file for PostgreSQL database in the root directory of this project. I used Supabase as the database provider for 2024, but the backup should work for any Postgres instance.
+
 ## How to upload applications to the dev selection database
 1. Clone the repository
 2. Create a `.env` file in the root directory with the following entries:
