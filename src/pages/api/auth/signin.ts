@@ -1,31 +1,42 @@
 import type { APIRoute } from "astro";
 import { supabase } from "../../../lib/supabase";
-import type { Provider } from "@supabase/supabase-js";
 
-export const POST: APIRoute = async ({ redirect }) => {
-  const provider = "google"; // Hard coded for now, change later if we add additional sign in methods
+export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+  const formData = await request.formData();
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
-  const validProviders = ["google"];
-  const redirectLink = process.env.VITE_BASE_URL ? process.env.VITE_BASE_URL : "https://jam.gsess.dev/api/auth/callback";
-  console.log(process.env)
+  if (!email || !password) {
+    return new Response("Email and password are required", { status: 400 });
+  }
+  
+  console.log("Signing in user:", email);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-  if (provider && validProviders.includes(provider)) {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: provider as Provider,
-      options: {
-        redirectTo: "http://jam.gsess.dev/api/auth/callback",
-        queryParams: {
-          hd: "tufts.edu"
-        }
-      },
-    });
-
-    if (error) {
-      return new Response(error.message, { status: 500 });
-    }
-
-    return redirect(data.url);
+  if (error) {
+    return new Response(error.message, { status: 400 });
   }
 
-  return new Response("Invalid Provider", { status: 400 });
+  if (!data.session) {
+    return new Response("No session created", { status: 400 });
+  }
+
+  // Set session cookies
+  cookies.set("sb-access-token", data.session.access_token, {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+  });
+  cookies.set("sb-refresh-token", data.session.refresh_token, {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+  });
+
+  return redirect("/dashboard");
 };

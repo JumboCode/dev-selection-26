@@ -56,13 +56,18 @@ if (userRoleError) {
   console.error(userRoleError);
 }
 
-if (!userRole) {
-  return redirect("/unauthorized");
-}
+// Default user role if not found in user_roles table
+const defaultUserRole = {
+  first_name: userData.user?.email?.split('@')[0] || 'User',
+  team_name: 'General',
+  role: 'User'
+};
+
+const finalUserRole = userRole || defaultUserRole;
 
 let selectionStatus: any = undefined;
 // Get all active dev selection statuses (if board)
-if (userRole.team_name === "Board") {
+if (finalUserRole.team_name === "Board") {
   const { data: teamSelectStatus, error: teamSelectStatusError } =
     await supabase.from("team_status").select("*");
   if (teamSelectStatusError) {
@@ -74,7 +79,7 @@ if (userRole.team_name === "Board") {
     await supabase
       .from("team_status")
       .select("*")
-      .eq("team_name", userRole.team_name);
+      .eq("team_name", finalUserRole.team_name);
   selectionStatus = teamSelectStatus;
   if (teamSelectStatusError) {
     console.error(teamSelectStatusError);
@@ -85,7 +90,7 @@ if (userRole.team_name === "Board") {
 const { data: teamLeadersQuery, error: teamLeadersError } = await supabase
   .from("user_roles")
   .select("email, role, first_name")
-  .eq("team_name", userRole.team_name);
+  .eq("team_name", finalUserRole.team_name);
 if (teamLeadersError) {
   console.error(teamLeadersError);
 }
@@ -100,7 +105,7 @@ interface ConfirmedDevsResults {
 const { data: confirmedDevsQuery, error: devsQueryError } = await supabase
   .from<string, any>("pmtl_application_data")
   .select(`sensitive_application_data(*)`)
-  .eq("confirmed_team", userRole.team_name);
+  .eq("confirmed_team", finalUserRole.team_name);
 
 if (devsQueryError) {
   console.error(devsQueryError);
@@ -132,10 +137,10 @@ if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
 
 <Layout title="JAM - Dashboard">
   <h1 class="text-center text-4xl my-4 font-semibold mx-2">
-    Hello {userRole.first_name}!
+    Hello {finalUserRole.first_name}!
   </h1>
   <h2 class="text-center text-2xl my-2 mx-2">
-    Team: {userRole.team_name} ({userRole.role})
+    Team: {finalUserRole.team_name} ({finalUserRole.role})
   </h2>
   <div class="flex justify-center mt-8">
     <SignOut />

@@ -150,6 +150,7 @@ const RANKING_IDX = 0; const SELECT_IDX = 0; const SELECTED_BY_IDX = 1;
 const WAITLIST_BY_IDX = 2;
 const DeveloperSelectionTable: any = (props: DevSelectionTableProps) => {
   const [realtimeData, setRealtimeData] = useState<DataType[]>(props.data);
+  console.log("Hello? Props perhaps?", props);
 
   async function selectDev(fake_name: string) {
     const currentSelections = await getSelectionsOnDev(supabase, fake_name, false);
