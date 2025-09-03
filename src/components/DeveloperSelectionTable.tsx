@@ -134,7 +134,7 @@ async function getSelectionsOnDev(supabase: any, fake_name: string, waitlist: bo
 
 }
 
-async function getDevInfo(fake_name: string) {
+async function getDevInfo(supabase: any, fake_name: string) {
   const { data: selectionsQuery, error: selectionsQueryError } = await supabase
     .from("pmtl_application_data")
     .select(`*, dev_selections(selected_by)`)
