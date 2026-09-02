@@ -1,42 +1,36 @@
 
 import type { APIRoute } from "astro";
-import { supabase } from "../../lib/supabase";
+import {
+  createAuthenticatedSupabaseClient,
+  isSameOriginRequest,
+} from "../../lib/supabase";
 
-export const GET: APIRoute = async ({ url, cookies, redirect }) => {
-  const accessToken = cookies.get("sb-access-token");
-  const refreshToken = cookies.get("sb-refresh-token");
+export const POST: APIRoute = async ({ request, url, cookies, redirect }) => {
+  if (!isSameOriginRequest(request, url)) {
+    return new Response("Invalid request origin", { status: 403 });
+  }
 
-  if (!accessToken || !refreshToken) {
+  const auth = await createAuthenticatedSupabaseClient(cookies);
+  if (!auth) {
     return redirect("/");
   }
 
-  const { data: userData, error: authError } = await supabase.auth.setSession({
-    refresh_token: refreshToken.value,
-    access_token: accessToken.value,
+  const formData = (await request.formData()) as unknown as {
+    get(name: string): string | File | null;
+  };
+  const teamName = formData.get("team");
+  if (typeof teamName !== "string" || !teamName.trim()) {
+    return new Response("Team is required", { status: 400 });
+  }
+
+  const { error } = await auth.supabase.rpc("approve_team_selections", {
+    p_team_name: teamName.trim(),
   });
-
-  if (authError) {
-    cookies.delete("sb-access-token", { path: "/" });
-    cookies.delete("sb-refresh-token", { path: "/" });
-    return redirect("/");
+  if (error) {
+    const message = encodeURIComponent(error.message);
+    const teamPath = encodeURIComponent(teamName.trim());
+    return redirect(`/dev-selection/${teamPath}?error=${message}`);
   }
-
-  const { data: userRole, error: userRoleError } = await supabase
-    .from("user_roles")
-    .select("*")
-    .eq("email", userData.user?.email)
-    .maybeSingle();
-
-  if (userRoleError || !userRole || userRole.team_name !== "Board") {
-    console.error(userRoleError || "Unauthorized access.");
-    return redirect("/unauthorized");
-  }
-
-  console.log(userRole.team_name)
-  await supabase
-    .from("team_status")
-    .update({ status: "Complete" })
-    .eq("team_name", url.searchParams.get("team"));
 
   return redirect("/dashboard");
 };

@@ -1,8 +1,18 @@
 import type { APIRoute } from "astro";
-import { supabase } from "../../../lib/supabase";
+import {
+  createRequestSupabaseClient,
+  isSameOriginRequest,
+  setAuthCookies,
+} from "../../../lib/supabase";
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
-  const formData = await request.formData();
+export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
+  if (!isSameOriginRequest(request, url)) {
+    return new Response("Invalid request origin", { status: 403 });
+  }
+
+  const formData = (await request.formData()) as unknown as {
+    get(name: string): string | File | null;
+  };
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
@@ -10,7 +20,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return new Response("Email and password are required", { status: 400 });
   }
   
-  console.log("Signing in user:", email);
+  const supabase = createRequestSupabaseClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -24,19 +34,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return new Response("No session created", { status: 400 });
   }
 
-  // Set session cookies
-  cookies.set("sb-access-token", data.session.access_token, {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-  });
-  cookies.set("sb-refresh-token", data.session.refresh_token, {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-  });
+  setAuthCookies(
+    cookies,
+    data.session.access_token,
+    data.session.refresh_token,
+  );
 
   return redirect("/dashboard");
 };

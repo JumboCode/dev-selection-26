@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro check && astro build",
+    "test:concurrency": "node --test tests/integration/selection-concurrency.test.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

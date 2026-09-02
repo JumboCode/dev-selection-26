@@ -3,10 +3,6 @@ from dotenv import load_dotenv
 from sqlalchemy import (
     create_engine,
     Table,
-    Column,
-    Integer,
-    Float,
-    String,
     MetaData,
     inspect,
 )
@@ -94,7 +90,7 @@ SENSITIVE_COLS = ["timestamp", "full_name", "email", "uncomfortable_with"]
 
 SENSITIVE_TABLE = "sensitive_application_data"
 PMTL_TABLE = "pmtl_application_data"
-DEV_SEL_TABLE = "dev_selections"
+SELECTION_TABLES = ("developer_selections", "dev_selections")
 
 def open_files():
     parser = argparse.ArgumentParser(
@@ -130,17 +126,6 @@ def open_files():
     return applications_csv, fake_names, output_dir
 
 
-SELECTIONS_COL = "selected_by"
-def create_dev_selection_table(applications):
-    return pd.DataFrame(
-        {
-            FAKENAME_COL: applications[FAKENAME_COL],  # Copy 'name' column
-            SELECTIONS_COL: [
-                "" for _ in range(len(applications))
-            ], 
-        }
-    )
-
 def add_fake_names(applications, fake_names):
     applications[FAKENAME_COL] = fake_names["characters"]
 
@@ -154,42 +139,51 @@ def add_app_status_fields(applications):
     applications[TEAM_COL] = ""
 
 
-def infer_sqlalchemy_type(dtype):
-    """Infer SQLAlchemy column type from a pandas dtype."""
-    if pd.api.types.is_integer_dtype(dtype):
-        return Integer
-    elif pd.api.types.is_float_dtype(dtype):
-        return Float
-    elif pd.api.types.is_string_dtype(dtype):
-        return String
-    else:
-        raise ValueError(f"Unsupported dtype: {dtype}")
-
-
 def upload_table(db_engine, table_name, table_df):
-    """Upload a DataFrame to a database table, replacing the table if it exists."""
+    """Replace table rows while preserving constraints, RLS, and relationships."""
     inspector = inspect(db_engine)
-    metadata = MetaData()
-    
-    # Drop table if it exists
     if inspector.has_table(table_name):
+        metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=db_engine)
-        table.drop(db_engine)
-        logging.info(f"Existing table '{table_name}' dropped.")
-        metadata.clear()  # Clear metadata to avoid reusing the same table name
+        unknown_columns = set(table_df.columns) - set(table.columns.keys())
+        if unknown_columns:
+            raise ValueError(
+                f"Table '{table_name}' is missing columns: "
+                + ", ".join(sorted(unknown_columns))
+            )
 
-    # Create new table
-    columns = [
-        Column(name, infer_sqlalchemy_type(dtype))
-        for name, dtype in table_df.dtypes.items()
-    ]
-    new_table = Table(table_name, metadata, *columns)
-    metadata.create_all(db_engine)
-    logging.info(f"New table '{table_name}' created.")
+        with db_engine.begin() as connection:
+            connection.execute(table.delete())
+            table_df.to_sql(
+                table_name,
+                con=connection,
+                if_exists="append",
+                index=False,
+            )
+    else:
+        table_df.to_sql(table_name, con=db_engine, if_exists="fail", index=False)
 
-    # Upload DataFrame to the table
-    table_df.to_sql(table_name, con=db_engine, if_exists="replace", index=False)
     logging.info(f"Data uploaded to '{table_name}' table.")
+
+
+def clear_existing_selections():
+    """Clear selections before importing a new application cohort."""
+    load_dotenv()
+    db_uri = os.getenv("SUPABASE_DB_URI")
+    if not db_uri:
+        raise RuntimeError("SUPABASE_DB_URI is required")
+
+    db_engine = create_engine(db_uri)
+    try:
+        inspector = inspect(db_engine)
+        with db_engine.begin() as connection:
+            for table_name in SELECTION_TABLES:
+                if inspector.has_table(table_name):
+                    table = Table(table_name, MetaData(), autoload_with=db_engine)
+                    connection.execute(table.delete())
+                    logging.info(f"Existing rows in '{table_name}' cleared.")
+    finally:
+        db_engine.dispose()
 
 
 def table_upload(table_name, table_data):
@@ -236,16 +230,14 @@ def main():
     add_fake_names(applications, fake_names)
     applications = applications.rename(columns=full_to_short)
     add_app_status_fields(applications)
-    dev_selections_table = create_dev_selection_table(applications)
-    
+
     primary_key = FAKENAME_COL
     sensitive_data = applications[[primary_key] + SENSITIVE_COLS]
     pmtl_data = applications.drop(columns=SENSITIVE_COLS)
-    
-    
+
+    clear_existing_selections()
     table_upload(SENSITIVE_TABLE, sensitive_data)
     table_upload(PMTL_TABLE, pmtl_data)
-    table_upload(DEV_SEL_TABLE, dev_selections_table)
     save_files(applications, short_to_full, output_dir)
 
 

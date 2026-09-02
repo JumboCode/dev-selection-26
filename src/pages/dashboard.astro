@@ -1,55 +1,24 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { supabase } from "../lib/supabase";
+import { createAuthenticatedSupabaseClient } from "../lib/supabase";
 import SignOut from "../components/SignOut.astro";
 import TeamTable from "../components/TeamTable.astro";
 import StatusTable from "../components/StatusTable.tsx";
-import { Card, Button, Table } from "antd";
+import { Card } from "antd";
 
-const { cookies, redirect } = Astro;
+const { cookies } = Astro;
 
-const accessToken = cookies.get("sb-access-token");
-const refreshToken = cookies.get("sb-refresh-token");
-
-interface TeamMember {
-  key: string;
-  name: string;
-  email: string;
-  role: string;
+const auth = await createAuthenticatedSupabaseClient(cookies);
+if (!auth) {
+  return Astro.redirect("/");
 }
 
-interface UserRole {
-  key: string;
-  first_name: string;
-  email: string;
-  team_name: string;
-  role: string;
-}
-
-if (!accessToken || !refreshToken) {
-  return redirect("/");
-}
-
-const { data: userData, error: authError } = await supabase.auth.setSession({
-  refresh_token: refreshToken.value,
-  access_token: accessToken.value,
-});
-
-if (authError) {
-  cookies.delete("sb-access-token", {
-    path: "/",
-  });
-  cookies.delete("sb-refresh-token", {
-    path: "/",
-  });
-
-  return redirect("/api/auth/signin");
-}
+const { supabase, user } = auth;
 
 const { data: userRole, error: userRoleError } = await supabase
   .from("user_roles")
   .select("*")
-  .eq("email", userData.user?.email)
+  .ilike("email", user.email ?? "")
   .maybeSingle();
 
 if (userRoleError) {
@@ -58,7 +27,7 @@ if (userRoleError) {
 
 // Default user role if not found in user_roles table
 const defaultUserRole = {
-  first_name: userData.user?.email?.split('@')[0] || 'User',
+  first_name: user.email?.split('@')[0] || 'User',
   team_name: 'General',
   role: 'User'
 };
@@ -93,13 +62,6 @@ const { data: teamLeadersQuery, error: teamLeadersError } = await supabase
   .eq("team_name", finalUserRole.team_name);
 if (teamLeadersError) {
   console.error(teamLeadersError);
-}
-
-interface ConfirmedDevsResults {
-  sensitive_application_data: {
-    full_name: string;
-    email: string;
-  };
 }
 
 const { data: confirmedDevsQuery, error: devsQueryError } = await supabase
