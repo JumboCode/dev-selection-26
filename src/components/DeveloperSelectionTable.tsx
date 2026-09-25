@@ -32,7 +32,10 @@ interface DataType {
   links: string;
   preferences_elaboration: string;
   additional_info: string;
-  jumbocode_previous_projects: string;
+  previous_jumbocode_developer: string;
+  devops_interest: string;
+  favorite_development_aspect: string;
+  mentorship_interest: string;
   developer_selections: DeveloperSelection[] | null;
   [key: string]: unknown;
 }
@@ -45,6 +48,21 @@ interface DeveloperSelectionTableProps {
   canEdit: boolean;
   supabaseUrl: string;
   supabaseAnonKey: string;
+}
+
+// Build filter options from the answers actually present so they don't go
+// stale when the form's class years or answer choices change between cycles.
+function answerFilters(data: DataType[], key: string) {
+  const values = new Set<string>();
+  data.forEach((record) => {
+    const value = record[key];
+    if (value !== null && value !== undefined && value !== "") {
+      values.add(String(value));
+    }
+  });
+  return [...values]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map((value) => ({ text: value, value }));
 }
 
 function selectionsFor(record: DataType): DeveloperSelection[] {
@@ -208,13 +226,24 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
     }
   }
 
-  const rankFilters = useMemo(
-    () =>
-      [...Array(12).keys()].map((index) => ({
-        text: index + 1,
-        value: index + 1,
-      })),
-    [],
+  const filterOptions = useMemo(
+    () => ({
+      rank: answerFilters(props.data ?? [], `rank_${props.team}`),
+      classYear: answerFilters(props.data ?? [], "class_year"),
+      underrepresented: answerFilters(
+        props.data ?? [],
+        "underrepresented_group_in_stem",
+      ),
+      inPersonThisSemester: answerFilters(
+        props.data ?? [],
+        "in_person_this_semester",
+      ),
+      inPersonNextSemester: answerFilters(
+        props.data ?? [],
+        "in_person_next_semester",
+      ),
+    }),
+    [props.data, props.team],
   );
 
   const columns = useMemo<TableColumnsType<DataType>>(() => {
@@ -303,7 +332,7 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
         dataIndex: rankingKey,
         key: rankingKey,
         sorter: (a, b) => Number(a[rankingKey]) - Number(b[rankingKey]),
-        filters: rankFilters,
+        filters: filterOptions.rank,
         onFilter: (value, record) => Number(record[rankingKey]) === Number(value),
       },
       { title: "Fake Name", dataIndex: "fake_name", key: "fake_name" },
@@ -312,10 +341,7 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
         title: "Class Year",
         dataIndex: "class_year",
         key: "class_year",
-        filters: ["2025", "2026", "2027", "2028"].map((year) => ({
-          text: year,
-          value: year,
-        })),
+        filters: filterOptions.classYear,
         onFilter: (value, record) => record.class_year === String(value),
         sorter: (a, b) => a.class_year.localeCompare(b.class_year),
       },
@@ -324,10 +350,7 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
         title: "Underrepresented in STEM",
         dataIndex: "underrepresented_group_in_stem",
         key: "underrepresented_group_in_stem",
-        filters: [
-          { text: "Yes", value: "Yes" },
-          { text: "No", value: "No" },
-        ],
+        filters: filterOptions.underrepresented,
         onFilter: (value, record) =>
           record.underrepresented_group_in_stem === value,
       },
@@ -335,18 +358,14 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
         title: "In person this semester?",
         dataIndex: "in_person_this_semester",
         key: "in_person_this_semester",
-        filters: ["Yes", "Studying remotely", "Taking a gap semester"].map(
-          (value) => ({ text: value, value }),
-        ),
+        filters: filterOptions.inPersonThisSemester,
         onFilter: (value, record) => record.in_person_this_semester === value,
       },
       {
         title: "In person next semester?",
         dataIndex: "in_person_next_semester",
         key: "in_person_next_semester",
-        filters: ["Yes", "Studying remotely", "Taking a gap semester"].map(
-          (value) => ({ text: value, value }),
-        ),
+        filters: filterOptions.inPersonNextSemester,
         onFilter: (value, record) => record.in_person_next_semester === value,
       },
       {
@@ -360,7 +379,7 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
         key: "links",
       },
     ];
-  }, [pendingSelections, props.canEdit, props.team, rankFilters]);
+  }, [filterOptions, pendingSelections, props.canEdit, props.team]);
 
   function renderEssays(entry: DataType) {
     const essays = [
@@ -379,8 +398,17 @@ const DeveloperSelectionTable = (props: DeveloperSelectionTableProps) => {
         response: entry.weekly_meeting_availability,
       },
       {
-        question: "Have you been a part of JumboCode before? If so, what project(s)?",
-        response: entry.jumbocode_previous_projects,
+        question: "Have you been a Developer for JumboCode before?",
+        response: entry.previous_jumbocode_developer,
+      },
+      {
+        question:
+          "If you answered YES to the previous question: would you be interested in being considered for our DevOps team, rather than a current project?",
+        response: entry.devops_interest,
+      },
+      {
+        question: "What aspect of developing do you enjoy the most?",
+        response: entry.favorite_development_aspect,
       },
       { question: "CS Classes Taken", response: entry.classes_taken },
       {

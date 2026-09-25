@@ -15,44 +15,47 @@ FAKENAMES_NONBINARY_COL = "Non-Binary Names"
 FAKENAME_COL = "fake_name"
 PRONOUNS_COL = "Pronouns"
 
+# 2026-27 application form. Each rank_<team> suffix must match that team's
+# team_status.team_name, which is also the /dev-selection/<team> URL slug.
+RANK_PREFIX = "Please rank your project preferences (1 being your first choice, and 8 being your last choice)"
+
 full_column_names = [
     "Timestamp",
     "Full Name",
-    "Board Recommended?",
     "Pronouns",
-    "Email Address",
+    "Tufts Email Address",
     "Class Year",
     "Do you identify as a member of an underrepresented group in STEM?",
     "Why do you want to join JumboCode? What do you hope to gain by joining the club?",
     "What's your experience with volunteering, working with non-profits, community engagement, and/or social good activism?",
     "Will you be in person on campus this semester?",
     "Do you expect to be in person on campus next semester?",
+    "What's your availability for a one-hour weekly team meeting?",
     "Which of the following classes have you taken?",
-    "List any technologies you're comfortable with:",
+    "List any technologies & skills you're comfortable with:",
     "What was your first introduction to computer science?",
     "Tell us about a project you're proud of",
-    "If you have any links to share with us (e.g. GitHub), please share them here:",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [The Lantern Club (Sristi Panchu, Thomas Lai)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [SpeakOUT Boston (Aidan Banerjee, Jimmy Maslen)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [HomeStart (Rebecca Dinsmore, Rusny Rahman)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Casa Myrna (Elizabeth Foster, Nishika Pabba)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Dress for Success (Jyoti Bhardwaj, TBA)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Sibling Connections (Ella Lesperance, Nate Nameth)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Somerville Homeless Coalition (Cameron Yuen, Henry Gray)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Bi-women Quarterly (Austen Money, Shreyas Ravi)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Keep Mass Beautiful (Anneka Le, Matt Torres)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Emerald Necklace Conservancy (Ben Skinner, Roger Burtonpatel)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [Theatre@First (Liam Strand, Amitav Nott)]",
-    "Please rank your project preferences (1 being your first choice, and 12 being your last choice) [The Legacy Project (Kim Nguyen, Nick Doan)]",
+    "If you have any links to share with us (e.g. GitHub/Personal Website), please share them here:",
+    f"{RANK_PREFIX} [Damien's Place]",
+    f"{RANK_PREFIX} [Hearty Meals for All]",
+    f"{RANK_PREFIX} [Massachusetts River Alliance]",
+    f"{RANK_PREFIX} [African Bridge Network]",
+    f"{RANK_PREFIX} [Somerville Media Center]",
+    f"{RANK_PREFIX} [Just a Start]",
+    f"{RANK_PREFIX} [Teen Empowerment]",
+    f"{RANK_PREFIX} [Mystic Learning Center]",
     "Please elaborate on your preferences here:",
+    "Have you been a Developer for JumboCode before?",
+    "If you answered YES to the previously question: would you be interested in being considered for our DevOps team, rather than a current project?",
+    "What aspect of developing do you enjoy the most?",
     "Is there anyone (in JumboCode or another applicant) you would feel uncomfortable working with for any reason? Feel free to elaborate on the situation as much or as little as you wish.",
+    'Would you be interested in participating in a JumboCode mentorship program as a mentee? More details to come, so selecting "Yes" is not a hard commitment.',
     "Is there anything else you want to add/want us to know?",
 ]
 
 short_column_names = [
     "timestamp",
     "full_name",
-    "board_recommended",
     "pronouns",
     "email",
     "class_year",
@@ -61,27 +64,30 @@ short_column_names = [
     "volunteering_experience",
     "in_person_this_semester",
     "in_person_next_semester",
+    "weekly_meeting_availability",
     "classes_taken",
     "technologies",
     "intro_to_cs",
     "project_proud_of",
     "links",
-    "rank_lantern_club",
-    "rank_speakout_boston",
-    "rank_homestart",
-    "rank_casa_myrna",
-    "rank_dress_for_success",
-    "rank_sibling_connections",
-    "rank_somerville_homeless",
-    "rank_biwomen_quarterly",
-    "rank_keep_mass_beautiful",
-    "rank_emerald_necklace",
-    "rank_theatre_first",
-    "rank_legacy_project",
+    "rank_damiens_place",
+    "rank_hearty_meals_for_all",
+    "rank_massachusetts_river_alliance",
+    "rank_african_bridge_network",
+    "rank_somerville_media_center",
+    "rank_just_a_start",
+    "rank_teen_empowerment",
+    "rank_mystic_learning_center",
     "preferences_elaboration",
+    "previous_jumbocode_developer",
+    "devops_interest",
+    "favorite_development_aspect",
     "uncomfortable_with",
+    "mentorship_interest",
     "additional_info",
 ]
+
+assert len(full_column_names) == len(short_column_names)
 
 full_to_short = dict(zip(full_column_names, short_column_names))
 short_to_full = dict(zip(short_column_names, full_column_names))
@@ -124,6 +130,24 @@ def open_files():
     output_dir = args.output_dir
 
     return applications_csv, fake_names, output_dir
+
+
+def validate_inputs(applications, fake_names):
+    """Fail before touching the database if the inputs don't match this form."""
+    applications.columns = applications.columns.str.strip()
+    missing = [col for col in full_column_names if col not in applications.columns]
+    unexpected = [col for col in applications.columns if col not in full_to_short]
+    if missing or unexpected:
+        raise ValueError(
+            "Application CSV columns don't match full_column_names.\n"
+            f"Missing: {missing}\nUnexpected: {unexpected}"
+        )
+
+    fake_name_count = fake_names["characters"].dropna().nunique()
+    if fake_name_count < len(applications):
+        raise ValueError(
+            f"{len(applications)} applications but only {fake_name_count} unique fake names"
+        )
 
 
 def add_fake_names(applications, fake_names):
@@ -227,6 +251,7 @@ def save_files(applications, short_to_full, output_dir):
 
 def main():
     applications, fake_names, output_dir = open_files()
+    validate_inputs(applications, fake_names)
     add_fake_names(applications, fake_names)
     applications = applications.rename(columns=full_to_short)
     add_app_status_fields(applications)
