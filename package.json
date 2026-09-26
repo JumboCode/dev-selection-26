@@ -7,6 +7,7 @@
     "start": "astro dev",
     "build": "astro check && astro build",
     "test:concurrency": "node --test tests/integration/selection-concurrency.test.mjs",
+    "test:origin": "node --test tests/integration/vercel-origin.test.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
