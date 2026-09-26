@@ -81,19 +81,20 @@ npm run test:concurrency
 
 ## Deployment
 
-### Prerequisite: update the Vercel adapter
+### Build and runtime
 
-The current Astro 4 Vercel adapter emits a Node 18 function when the project is
-built with Node 22. Node 18 is retired, so upgrade Astro and its official
-integrations before the production rollout:
+The app uses Astro 5 and the Vercel 8 adapter. Use Node.js 22.12 or newer within
+the Node 22 release line, and configure the Vercel project to use Node.js `22.x`.
+The adapter derives the function runtime from the Node version running the build.
 
 ```sh
-npx @astrojs/upgrade
+npm ci
 ASTRO_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Do not continue until the build succeeds and no longer reports a Node 18
-fallback. Configure the Vercel project to use Node.js `22.x`.
+Before deploying, verify that `.vercel/output/functions/_render.func/.vc-config.json`
+contains `"runtime": "nodejs22.x"`. A successful build alone does not guarantee
+that the emitted runtime is supported by Vercel.
 
 ### Stage the release
 
