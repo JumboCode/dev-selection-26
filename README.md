@@ -29,11 +29,23 @@ changes.
 
 All selection writes go through `set_developer_selection` and
 `remove_developer_selection`. These functions lock the applicable
-`team_status` row. `submit_team_selections` takes the same lock, verifies exactly
-10 selected developers and 1–3 waitlisted developers, and atomically changes
+`team_status` row. `submit_team_selections` takes the same lock, verifies
+10–12 selected developers and 1–3 waitlisted developers, and atomically changes
 the status to `Under Review`. Team users cannot edit after submission; scoped
 Board users can edit during review and can finalize it with
-`approve_team_selections`.
+`approve_team_selections`. A team can also mark developers `saved` (a private
+shortlist); saved rows don't count toward submission.
+
+Approval sets `confirmed_team` on each selected developer and is refused if any
+of them is already confirmed to another team, so the Board must resolve that
+conflict first. Once a team is `Complete`, `get_confirmed_roster()` reveals its
+developers' real names and emails on the dashboard to that team and its scoped
+Board members; `sensitive_application_data` stays unreadable through the API.
+
+Project names shown in the UI come from `team_status.display_name`. The team
+directory on each selection page lists members from `user_roles`; set
+`user_roles.headshot_url` to any public image URL to show a headshot instead of
+initials.
 
 The Astro server creates a new Supabase client for every request. Browser code
 receives only the access token needed for Realtime and sends mutations to the

@@ -1,9 +1,11 @@
 import React from 'react';
 import { Button, Space, Table, Tag } from 'antd';
 import type { TableProps } from 'antd';
+import { teamLabel } from '../lib/teams';
 
 interface DataType {
   team_name: string;
+  display_name?: string | null;
   status: string;
 }
 
@@ -16,6 +18,7 @@ const columns: TableProps<DataType>['columns'] = [
     title: 'Project Name',
     dataIndex: 'team_name',
     key: 'team_name',
+    render: (_, { team_name, display_name }) => teamLabel(team_name, display_name),
   },
   {
     title: 'Dev Selection Status',
@@ -56,6 +59,6 @@ const columns: TableProps<DataType>['columns'] = [
   },
 ];
 
-const StatusTable: React.FC<StatusTableProps> = (props) => <Table columns={columns} dataSource={props.rows} scroll={{ x: "max-content" }} />;
+const StatusTable: React.FC<StatusTableProps> = (props) => <Table rowKey="team_name" columns={columns} dataSource={props.rows} scroll={{ x: "max-content" }} />;
 
 export default StatusTable;

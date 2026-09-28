@@ -4,7 +4,9 @@ import {
   isSameOriginRequest,
 } from "../../lib/supabase";
 
-type SelectionType = "selected" | "waitlisted";
+type SelectionType = "selected" | "waitlisted" | "saved";
+
+const SELECTION_TYPES: readonly unknown[] = ["selected", "waitlisted", "saved"];
 
 interface SelectionRequest {
   fakeName?: unknown;
@@ -48,7 +50,7 @@ export const POST: APIRoute = async ({ request, cookies, url }) => {
   const body = await readBody(request);
   if (
     !validNames(body) ||
-    (body.selectionType !== "selected" && body.selectionType !== "waitlisted")
+    !SELECTION_TYPES.includes(body.selectionType)
   ) {
     return new Response("Invalid selection request", { status: 400 });
   }

@@ -29,7 +29,7 @@ function readConfiguration() {
     assert.equal(typeof user.password, "string");
     assert.equal(typeof user.team, "string");
   }
-  assert.ok(fakeNames.length >= 12, "Configure at least 12 disposable fake names");
+  assert.ok(fakeNames.length >= 14, "Configure at least 14 disposable fake names");
 
   return {
     url: requiredEnvironment("SUPABASE_URL"),
@@ -171,14 +171,14 @@ test(
 
       await resetFixtures(service, config);
       const fixtureRows = [
-        ...config.fakeNames.slice(0, 10).map((fakeName) => ({
+        ...config.fakeNames.slice(0, 12).map((fakeName) => ({
           fake_name: fakeName,
           team_name: team,
           selection_type: "selected",
           created_by: user.id,
         })),
         {
-          fake_name: config.fakeNames[10],
+          fake_name: config.fakeNames[12],
           team_name: team,
           selection_type: "waitlisted",
           created_by: user.id,
@@ -191,7 +191,7 @@ test(
 
       const [selectionResult, submissionResult] = await Promise.all([
         firstClient.rpc("set_developer_selection", {
-          p_fake_name: config.fakeNames[11],
+          p_fake_name: config.fakeNames[13],
           p_team_name: team,
           p_selection_type: "selected",
         }),
@@ -215,7 +215,7 @@ test(
         .from("developer_selections")
         .select("fake_name")
         .eq("team_name", team)
-        .eq("fake_name", config.fakeNames[11]);
+        .eq("fake_name", config.fakeNames[13]);
       assert.ifError(extraError);
 
       if (statusRow.status === "Under Review") {

@@ -4,6 +4,10 @@ import { createAuthenticatedSupabaseClient } from "../lib/supabase";
 import SignOut from "../components/SignOut.astro";
 import TeamTable from "../components/TeamTable.astro";
 import StatusTable from "../components/StatusTable.tsx";
+import ConfirmedRoster, {
+  type ConfirmedDeveloper,
+} from "../components/ConfirmedRoster.tsx";
+import { teamLabel } from "../lib/teams";
 import { Card } from "antd";
 
 const { cookies } = Astro;
@@ -55,7 +59,7 @@ if (finalUserRole.team_name === "Board") {
   }
 }
 
-// Get all team members (search in user_roles and accepted col of apps)
+// Get this team's leaders
 const { data: teamLeadersQuery, error: teamLeadersError } = await supabase
   .from("user_roles")
   .select("email, role, first_name")
@@ -64,14 +68,26 @@ if (teamLeadersError) {
   console.error(teamLeadersError);
 }
 
-const { data: confirmedDevsQuery, error: devsQueryError } = await supabase
-  .from<string, any>("pmtl_application_data")
-  .select(`sensitive_application_data(*)`)
-  .eq("confirmed_team", finalUserRole.team_name);
-
-if (devsQueryError) {
-  console.error(devsQueryError);
+// Real names and emails of developers on approved (Complete) teams. The
+// database function only returns teams this user belongs to or reviews.
+const { data: confirmedRows, error: confirmedError } = await supabase.rpc(
+  "get_confirmed_roster",
+);
+if (confirmedError) {
+  console.error(confirmedError);
 }
+
+const teamLabels = new Map<string, string>(
+  (selectionStatus ?? []).map((row: any) => [
+    row.team_name,
+    teamLabel(row.team_name, row.display_name),
+  ]),
+);
+const labelFor = (slug: string) => teamLabels.get(slug) ?? teamLabel(slug);
+
+const confirmedDevelopers: ConfirmedDeveloper[] = (confirmedRows ?? []).map(
+  (row: any) => ({ ...row, team_label: labelFor(row.team_name) }),
+);
 
 const fullRoster: any = [];
 teamLeadersQuery?.forEach((leader, index) => {
@@ -83,18 +99,19 @@ teamLeadersQuery?.forEach((leader, index) => {
   });
 });
 
-if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
-  confirmedDevsQuery.forEach((dev: any) => {
-    if (dev.sensitive_application_data) {
-      fullRoster.push({
-        key: fullRoster.length.toString(),
-        email: dev.sensitive_application_data.email,
-        name: dev.sensitive_application_data.full_name,
-        role: "Developer",
-      });
-    }
+if (finalUserRole.team_name !== "Board") {
+  confirmedDevelopers.forEach((dev) => {
+    fullRoster.push({
+      key: fullRoster.length.toString(),
+      email: dev.email,
+      name: dev.full_name,
+      role: "Developer",
+    });
   });
 }
+
+const teamHeading =
+  finalUserRole.team_name === "Board" ? "Board" : labelFor(finalUserRole.team_name);
 ---
 
 <Layout title="JAM - Dashboard">
@@ -102,7 +119,7 @@ if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
     Hello {finalUserRole.first_name}!
   </h1>
   <h2 class="text-center text-2xl my-2 mx-2">
-    Team: {finalUserRole.team_name} ({finalUserRole.role})
+    Team: {teamHeading} ({finalUserRole.role})
   </h2>
   <div class="flex justify-center mt-8">
     <SignOut />
@@ -115,6 +132,15 @@ if (confirmedDevsQuery && confirmedDevsQuery.length > 0) {
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
     <Card title="My Team" client:only="react">
       <TeamTable rows={fullRoster} />
+    </Card>
+  </div>
+  <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
+    <Card title="Confirmed Developers" client:only="react">
+      <ConfirmedRoster
+        rows={confirmedDevelopers}
+        showTeam={finalUserRole.team_name === "Board"}
+        client:only="react"
+      />
     </Card>
   </div>
 </Layout>

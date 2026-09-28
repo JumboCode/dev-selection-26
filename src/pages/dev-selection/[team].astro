@@ -3,6 +3,8 @@ import Layout from "../../layouts/Layout.astro";
 import { createAuthenticatedSupabaseClient } from "../../lib/supabase";
 import { Button, Card } from "antd";
 import DeveloperSelectionTable from "../../components/DeveloperSelectionTable.tsx";
+import TeamDirectory from "../../components/TeamDirectory.tsx";
+import { buildTeamDirectory, teamLabel } from "../../lib/teams";
 
 const { cookies, url } = Astro;
 const { team } = Astro.params;
@@ -10,10 +12,6 @@ const { team } = Astro.params;
 if (!team) {
   return Astro.redirect("/dashboard");
 }
-
-const projectNameReadable = team
-  .replace(/_/g, " ")
-  .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const auth = await createAuthenticatedSupabaseClient(cookies);
 if (!auth) {
@@ -67,17 +65,27 @@ const devData = devSelectionData?.map((entry, index) => {
   };
 });
 
-const { data: status, error: statusError } = await supabase
+// Every team plus its members, for readable names and the conflict directory.
+const { data: teamRows, error: teamRowsError } = await supabase
   .from("team_status")
-  .select("status")
-  .eq("team_name", team)
-  .maybeSingle();
-if (statusError) {
-  console.error(statusError);
+  .select("team_name, display_name, status");
+if (teamRowsError) {
+  console.error(teamRowsError);
 }
+const { data: memberRows, error: memberRowsError } = await supabase
+  .from("user_roles")
+  .select("team_name, first_name, role, headshot_url")
+  .neq("team_name", "Board");
+if (memberRowsError) {
+  console.error(memberRowsError);
+}
+const teams = buildTeamDirectory(teamRows, memberRows);
+
+const status = teams.find((entry) => entry.team_name === team);
 if (!status) {
   return Astro.redirect("/unauthorized");
 }
+const projectNameReadable = teamLabel(team, status.display_name);
 
 const canEdit = userRole.team_name === "Board"
   ? status.status !== "Complete"
@@ -112,17 +120,25 @@ const errorMessage = url.searchParams.get("error");
   </div>
 
   <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
-    <Card title="Developer Applications" client:only="react">
-      <DeveloperSelectionTable
-        channel="channel-2"
-        data={devData ?? []}
-        team={team}
-        accessToken={accessToken}
-        canEdit={canEdit}
-        supabaseUrl={import.meta.env.SUPABASE_URL}
-        supabaseAnonKey={import.meta.env.SUPABASE_ANON_KEY}
-        client:only="react"
-      />
+    <DeveloperSelectionTable
+      channel="channel-2"
+      data={devData ?? []}
+      team={team}
+      teams={teams}
+      accessToken={accessToken}
+      canEdit={canEdit}
+      supabaseUrl={import.meta.env.SUPABASE_URL}
+      supabaseAnonKey={import.meta.env.SUPABASE_ANON_KEY}
+      client:only="react"
+    />
+  </div>
+
+  <div class="mx-4 lg:mx-8 xl:mx-16 my-8">
+    <Card title="Project Teams" client:only="react">
+      <p class="mb-4 text-gray-600">
+        Who to find if another team wants the same developer.
+      </p>
+      <TeamDirectory teams={teams} currentTeam={team} client:only="react" />
     </Card>
   </div>
 
@@ -130,7 +146,7 @@ const errorMessage = url.searchParams.get("error");
     <Card title={"Board Approval"} client:only="react">
       <p>Developer Selection Checklist:</p>
       <ul class="list-disc ml-8 mb-4">
-        <li class="list-item">Have you selected 10 developers?</li>
+        <li class="list-item">Have you selected 10-12 developers?</li>
         <li class="list-item">
           Have you selected 1-3 developers for the waitlist?
         </li>
@@ -159,7 +175,7 @@ const errorMessage = url.searchParams.get("error");
         ) : (
           <div>
             <h2 class="mb-2 text-xl font-semibold">
-              {userRole.role} ({userRole.team_name}) Send For Approval
+              {userRole.role} ({projectNameReadable}) Send For Approval
             </h2>
             <form action="/api/sendapproval" method="post">
               <Button
